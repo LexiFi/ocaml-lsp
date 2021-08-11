@@ -75,7 +75,7 @@ let initialize_info : InitializeResult.t =
       ~referencesProvider:(`Bool true) ~documentHighlightProvider:(`Bool true)
       ~documentFormattingProvider:(`Bool true)
       ~selectionRangeProvider:(`Bool true) ~documentSymbolProvider:(`Bool true)
-      ~workspaceSymbolProvider:(`Bool true) ~foldingRangeProvider:(`Bool true)
+      ~workspaceSymbolProvider:(`Bool true) ~foldingRangeProvider:(`Bool false)
       ~experimental ~renameProvider ~workspace ()
   in
   let serverInfo =

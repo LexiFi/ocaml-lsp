@@ -224,8 +224,8 @@ let symbols_from_cm_file ~filter root_uri cm_file =
   | None -> []
   | Some sourcefile -> (
     match Filename.extension sourcefile with
-    | ".ml"
-    | ".mli" -> (
+    | ".ml" | ".mf"
+    | ".mli" | ".mfi" -> (
       let sourcepath = Filename.concat root_uri sourcefile in
       match browse_of_cmt cmt with
       | None -> []

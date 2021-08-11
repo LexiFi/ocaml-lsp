@@ -7,11 +7,11 @@ module Kind = struct
 
   let of_fname p =
     match Filename.extension p with
-    | ".ml"
+    | ".ml" | ".mf"
     | ".eliom"
     | ".re" ->
       Impl
-    | ".mli"
+    | ".mli" | ".mfi"
     | ".eliomi"
     | ".rei" ->
       Intf
@@ -49,7 +49,7 @@ module Syntax = struct
     | ".eliomi"
     | ".eliom"
     | ".mli"
-    | ".ml" ->
+    | ".ml" | ".mfi" | ".mf" ->
       Ocaml
     | ".rei"
     | ".re" ->
@@ -193,15 +193,20 @@ let close t = Scheduler.cancel_timer t.timer
 let get_impl_intf_counterparts uri =
   let fpath = Uri.to_path uri in
   let fname = Filename.basename fpath in
-  let ml, mli, eliom, eliomi, re, rei, mll, mly =
-    ("ml", "mli", "eliom", "eliomi", "re", "rei", "mll", "mly")
+  let ml, mli, eliom, eliomi, re, rei, mll, mly, mf, mfi =
+    ("ml", "mli", "eliom", "eliomi", "re", "rei", "mll", "mly", "mf", "mfi")
   in
   let exts_to_switch_to =
+    if Filename.extension fname = ".mf" then
+      [ mfi ]
+    else if Filename.extension fname = ".mfi" then
+      [ mf ]
+    else
     match Syntax.of_fname fname with
     | Ocaml -> (
       match Kind.of_fname fname with
-      | Intf -> [ ml; mly; mll; eliom; re ]
-      | Impl -> [ mli; mly; mll; eliomi; rei ])
+      | Intf -> [ ml; mly; mll; eliom; re; mf ]
+      | Impl -> [ mli; mly; mll; eliomi; rei; mfi ])
     | Reason -> (
       match Kind.of_fname fname with
       | Intf -> [ re; ml ]

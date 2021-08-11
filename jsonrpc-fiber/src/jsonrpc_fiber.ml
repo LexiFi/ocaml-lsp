@@ -103,9 +103,10 @@ struct
       match exn.exn with
       | Jsonrpc.Response.Error.E resp -> resp
       | _ ->
+        let message = Format.asprintf "%a" Exn_with_backtrace.pp_uncaught exn in
         let data = exn |> Exn_with_backtrace.to_dyn |> Json.of_dyn in
         Response.Error.make ~code:InternalError ~data
-          ~message:"uncaught exception" ()
+          ~message ()
     in
     Response.error id error
 
