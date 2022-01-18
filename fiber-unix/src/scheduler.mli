@@ -5,9 +5,9 @@ type run_error =
   | Abort_requested
   | Exn of Exn_with_backtrace.t
 
-val run_result : 'a Fiber.t -> ('a, run_error) result
+val run_result : (unit -> 'a Fiber.t) -> ('a, run_error) result
 
-val run : 'a Fiber.t -> 'a
+val run : (unit -> 'a Fiber.t) -> 'a
 
 type thread
 
@@ -42,5 +42,7 @@ val cancel_timer : timer -> unit Fiber.t
 val cancel_timers : unit -> unit Fiber.t
 
 val wait_for_process : Pid.t -> Unix.process_status Fiber.t
+
+val sleep : float -> unit Fiber.t
 
 val abort : unit -> unit Fiber.t

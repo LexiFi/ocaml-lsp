@@ -1,14 +1,13 @@
 open Import
+open Fiber.O
 
 let action_title = "Add missing `rec` keyword"
 
 let let_bound_vars bindings =
-  List.filter_map
-    ~f:(fun vb ->
+  List.filter_map bindings ~f:(fun vb ->
       match vb.Typedtree.vb_pat.pat_desc with
       | Typedtree.Tpat_var (id, loc) -> Some (id, loc)
       | _ -> None)
-    bindings
 
 (** If the cursor position is inside a let binding which should have a ret tag
     and does not, return the Location.t of the binding. *)
@@ -62,9 +61,7 @@ let code_action_add_rec uri diagnostics doc loc =
     ~kind:CodeActionKind.QuickFix ~edit ~isPreferred:false ()
 
 let code_action doc (params : CodeActionParams.t) =
-  let open Fiber.O in
   let pos_start = Position.logical params.range.start in
-
   let m_diagnostic =
     List.find params.context.diagnostics ~f:(fun d ->
         let is_unbound () =
@@ -77,10 +74,12 @@ let code_action doc (params : CodeActionParams.t) =
         in_range () && is_unbound ())
   in
   match m_diagnostic with
+  | None -> Fiber.return None
   | Some d ->
     let+ loc =
       Document.with_pipeline_exn doc (fun pipeline ->
           has_missing_rec pipeline pos_start)
     in
     Option.map loc ~f:(code_action_add_rec params.textDocument.uri [ d ] doc)
-  | None -> Fiber.return None
+
+let t = { Code_action.kind = QuickFix; run = code_action }

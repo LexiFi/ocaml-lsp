@@ -35,9 +35,9 @@ export const toURI = (s) => {
 };
 
 export const start = (opts?: cp.SpawnOptions) => {
-  opts = opts || {
-    env: { ...process.env },
-  };
+  let env = { ...process.env };
+  env.OCAMLLSP_TEST = "1";
+  opts = opts || { env: env };
   let childProcess = cp.spawn(serverPath, [], opts);
 
   let connection = rpc.createMessageConnection(
@@ -94,18 +94,18 @@ export const testUri = (file: string) => {
   return URI.file(file).toString();
 };
 
-export const toEqualUri = (
-  obj: jest.MatcherContext,
-  received: string,
-  expected: string,
-) => {
+export const toEqualUri = function (received: string, expected: string) {
+  const obj = this;
+
   const options = {
     comment: "Uri equality",
     isNot: obj.isNot,
     promise: obj.promise,
   };
+
   const pass =
-    URI.parse(received).toString() === URI.parse(received).toString();
+    URI.parse(received).toString() === URI.parse(expected).toString();
+
   const message = pass
     ? () =>
         obj.utils.matcherHint("toEqualUri", undefined, undefined, options) +

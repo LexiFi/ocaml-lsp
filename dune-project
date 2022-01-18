@@ -49,13 +49,13 @@ possible and does not make any assumptions about IO.
   (re (>= 1.5.0))
   (ppx_yojson_conv_lib (>= "v0.14"))
   dune-build-info
-  dot-merlin-reader
+  spawn
   (pp (>= 1.1.2))
   (csexp (>= 1.5))
   (result (>= 1.5))
-  (ocamlformat-rpc-lib (and (>= 0.18.0) (< 0.19.0)))
+  (ocamlformat-rpc-lib (and (>= 0.18.0) (< 0.20.0)))
   (odoc :with-doc)
-  (ocaml (and (>= 4.12) (< 4.13)))))
+  (ocaml (and (>= 4.13) (< 4.14)))))
 
 (package
  (name jsonrpc)

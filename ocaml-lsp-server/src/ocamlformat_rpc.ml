@@ -1,4 +1,5 @@
 open Import
+open Fiber.O
 
 module Process : sig
   type t
@@ -34,7 +35,6 @@ end = struct
   let supported_versions = [ "v1" ]
 
   let pick_client ~pid input output io_thread =
-    let open Fiber.O in
     match
       Scheduler.async io_thread (fun () ->
           Ocamlformat_rpc_lib.pick_client ~pid input output supported_versions)
@@ -47,7 +47,6 @@ end = struct
       | Error e -> Exn_with_backtrace.reraise e)
 
   let configure ~logger { io_thread; client; _ } =
-    let open Fiber.O in
     (* We ask for 64 columns formatting as this appear to be the maximum size of
        VScode popups. TODO We should probably allow some flexibility for other
        editors that use the server. *)
@@ -72,16 +71,16 @@ end = struct
 
   let create ~logger ~bin () =
     let bin = Fpath.to_string bin in
-    let argv = [| bin |] in
     let pid, stdout, stdin =
       let stdin_i, stdin_o = Unix.pipe () in
       let stdout_i, stdout_o = Unix.pipe () in
-      let pid = Unix.create_process bin argv stdin_i stdout_o Unix.stderr in
+      let pid =
+        Spawn.spawn ~prog:bin ~argv:[ bin ] ~stdin:stdin_i ~stdout:stdout_o ()
+      in
       Unix.close stdin_i;
       Unix.close stdout_o;
       (pid, stdout_i, stdin_o)
     in
-    let open Fiber.O in
     let* io_thread = Scheduler.create_thread () in
     let input = Unix.in_channel_of_descr stdout in
     let output = Unix.out_channel_of_descr stdin in
@@ -116,7 +115,6 @@ end = struct
       Ok process
 
   let run { pid; input; output; io_thread; _ } =
-    let open Fiber.O in
     let+ (_ : Unix.process_status) = Scheduler.wait_for_process pid in
     close_in_noerr input;
     close_out_noerr output;
@@ -124,6 +122,7 @@ end = struct
 end
 
 type state =
+  | Disabled
   | Stopped
   | Waiting_for_init of
       { ask_init : unit Fiber.Ivar.t
@@ -134,22 +133,24 @@ type state =
 type t = state ref
 
 let get_process t =
-  let open Fiber.O in
   match !t with
   | Running p -> Fiber.return @@ Ok p
-  | Stopped -> Fiber.return @@ Error `No_process
+  | Disabled
+  | Stopped ->
+    Fiber.return @@ Error `No_process
   | Waiting_for_init { ask_init; wait_init } -> (
     let* () = Fiber.Ivar.fill ask_init () in
     let+ () = Fiber.Ivar.read wait_init in
     match !t with
     | Running p -> Ok p
-    | Stopped -> Error `No_process
+    | Disabled
+    | Stopped ->
+      Error `No_process
     | Waiting_for_init _ ->
       Code_error.raise
         "Expected to receive `Started` or `Stopped` after mailing `Start`" [])
 
 let format_type t ~typ =
-  let open Fiber.O in
   let* p = get_process t in
   match p with
   | Error `No_process -> Fiber.return @@ Error `No_process
@@ -165,14 +166,20 @@ let format_type t ~typ =
       | Ok s -> s
       | Error e -> Exn_with_backtrace.reraise e))
 
+let format_doc t doc =
+  let txt = Document.source doc |> Msource.text in
+  let+ res = format_type t ~typ:txt in
+  Result.map res ~f:(fun to_ -> Diff.edit ~from:txt ~to_)
+
 let create_state () =
   Waiting_for_init
     { ask_init = Fiber.Ivar.create (); wait_init = Fiber.Ivar.create () }
 
-let create () = ref (create_state ())
+let _create () = ref (create_state ())
+
+let create () = ref Disabled
 
 let maybe_fill ivar x =
-  let open Fiber.O in
   let* v = Fiber.Ivar.peek ivar in
   match v with
   | Some _ -> Fiber.return ()
@@ -180,7 +187,9 @@ let maybe_fill ivar x =
 
 let stop t =
   match !t with
-  | Stopped -> Fiber.return ()
+  | Disabled
+  | Stopped ->
+    Fiber.return ()
   | Waiting_for_init { wait_init; ask_init } ->
     (* If the server was never started we still need to fill the ivar for the
        fiber to finish *)
@@ -193,14 +202,16 @@ let stop t =
     Fiber.return ()
 
 let run_rpc ~logger ~bin t =
-  let open Fiber.O in
   match !t with
+  | Disabled -> assert false
   | Stopped -> Code_error.raise "ocamlformat already stopped" []
   | Running _ -> Code_error.raise "ocamlformat already running" []
   | Waiting_for_init { ask_init; wait_init } -> (
     let* () = Fiber.Ivar.read ask_init in
     match !t with
-    | Stopped -> Fiber.return ()
+    | Disabled
+    | Stopped ->
+      Fiber.return ()
     | Running _ -> assert false
     | Waiting_for_init _ -> (
       let* process = Process.create ~logger ~bin () in
@@ -217,26 +228,31 @@ let run_rpc ~logger ~bin t =
         | _ -> ())))
 
 let run ~logger t =
-  let open Fiber.O in
-  match Bin.which "ocamlformat-rpc" with
-  | None ->
-    t := Stopped;
-    Fiber.return (Error `Binary_not_found)
-  | Some bin ->
-    let rec loop () =
-      match !t with
-      | Stopped -> Fiber.return (Ok ())
-      | Running _ -> assert false
-      | Waiting_for_init { ask_init; wait_init = _ } -> (
-        (* We wait for the first query to start the server or for ocamllsp to
-           exit *)
-        let* () = Fiber.Ivar.read ask_init in
+  match !t with
+  | Disabled -> Fiber.return (Error `Disabled)
+  | _ -> (
+    match Bin.which "ocamlformat-rpc" with
+    | None ->
+      t := Stopped;
+      Fiber.return (Error `Binary_not_found)
+    | Some bin ->
+      let rec loop () =
         match !t with
-        | Waiting_for_init _ ->
-          let* () = run_rpc ~logger ~bin t in
-          (* We loop to automatically restart the server if it stopped *)
-          loop ()
+        | Disabled -> assert false
+        | Stopped -> Fiber.return (Ok ())
         | Running _ -> assert false
-        | Stopped -> Fiber.return (Ok ()))
-    in
-    loop ()
+        | Waiting_for_init { ask_init; wait_init = _ } -> (
+          (* We wait for the first query to start the server or for ocamllsp to
+             exit *)
+          let* () = Fiber.Ivar.read ask_init in
+          match !t with
+          | Waiting_for_init _ ->
+            let* () = run_rpc ~logger ~bin t in
+            (* We loop to automatically restart the server if it stopped *)
+            loop ()
+          | Disabled
+          | Running _ ->
+            assert false
+          | Stopped -> Fiber.return (Ok ()))
+      in
+      loop ())

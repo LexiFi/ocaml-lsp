@@ -25,12 +25,11 @@ describe("ocamllsp/switchImplIntf", () => {
 
   beforeEach(async () => {
     languageServer = await LanguageServer.startAndInitialize();
-    await fs.rmdir(testWorkspacePath, { recursive: true });
     await fs.mkdir(testWorkspacePath);
   });
 
   afterEach(async () => {
-    await fs.rmdir(testWorkspacePath, { recursive: true });
+    await fs.rm(testWorkspacePath, { recursive: true });
     await LanguageServer.exit(languageServer);
     languageServer = null;
   });

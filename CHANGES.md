@@ -1,6 +1,29 @@
+# 1.9.1
+
+## Fixes
+
+- Disable functionality reliant on ocamlformat-rpc for now (#555)
+
+- 4.13 compatiblity
+
+# 1.9.0 (11/21/2021)
+
+## Fixes
+
+- Ppx processes are now executed correctly (#513)
+
+## Breaking Change
+
+- ocamllsp drops support for `.merlin` files, and as a consequence no longer
+  depends on dot-merlin-reader. (#523)
+
+## Features
+
+- New code action to automatically remove values, types, opens (#502)
+
 # 1.8.3 (09/26/2021)
 
-- Fix debouncing of document updates. It was essentially complicated broken in
+- Fix debouncing of document updates. It was essentially completely broken in
   all but the most trivial cases. (#509 fixes #504)
 
 - Fix completion when passing named and functional arguments (#512)

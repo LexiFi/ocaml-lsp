@@ -14,8 +14,8 @@ let
         {
           owner = "ocaml";
           repo = "opam-repository";
-          rev = "c19a4dd26fe12963136a3d265cb1340ef48acc61";
-          sha256 = "1nyj9n217s6c33pkkjck3n2a3d38npvqy1m8kd4y7vqjqlj86247";
+          rev = "93ee88094de0e89fa1ff20d8d73d580ef481ccc4";
+          sha256 = "15z75q8f07qzm3bqc7ivdf9v8rqgrzb4f7c5r9dq54ydqv227srk";
         };
         src = (pkgs.fetchFromGitHub) fetch;
       };
@@ -24,7 +24,7 @@ in
 {
   format-version = 4;
   inherit repos;
-  ocaml-version = "4.12.0";
+  ocaml-version = "4.13.1";
   selection = 
   {
     astring = 
@@ -49,11 +49,11 @@ in
     base = 
     {
       pname = "base";
-      version = "v0.14.1";
+      version = "v0.14.2";
       src = pkgs.fetchurl 
       {
-        url = "https://github.com/janestreet/base/archive/v0.14.1.tar.gz";
-        sha256 = "13b0xc62ka8i2ry2r62gc194wzfdq1vqf2qygwrrk26pvqn8a9l9";
+        url = "https://github.com/janestreet/base/archive/v0.14.2.tar.gz";
+        sha256 = "095zbz0bqrmhgw62jyhb51kqp89kph1cfcpr5ww94slr5rldpj7i";
       };
       opamInputs = 
       {
@@ -61,8 +61,8 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/base/base.v0.14.1";
-        hash = "sha256:014xlh33ayf440lf9yx62z43q9977254911p3jyncw2hrmarny4h";
+        package = "packages/base/base.v0.14.2";
+        hash = "sha256:004ypm5lr9mp7glgfggi47x8h644f9z7xrx5gahsx1l82b566frv";
       };
     };
     base-bytes = 
@@ -164,11 +164,11 @@ in
     cppo = 
     {
       pname = "cppo";
-      version = "1.6.7";
+      version = "1.6.8";
       src = pkgs.fetchurl 
       {
-        url = "https://github.com/ocaml-community/cppo/releases/download/v1.6.7/cppo-v1.6.7.tbz";
-        sha256 = "17ajdzrnmnyfig3s6hinb56mcmhywbssxhsq32dz0v90dhz3wmfv";
+        url = "https://github.com/ocaml-community/cppo/archive/v1.6.8.tar.gz";
+        sha256 = "0lxy4xkkkwgs1cj6d9lyzsqi9f6fc9r6cir5imi7yjqrpd86s1by";
       };
       opamInputs = 
       {
@@ -176,8 +176,8 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/cppo/cppo.1.6.7";
-        hash = "sha256:1nzizaa7q2rnlg7l1rcf4q503lssvmal3vjj8gchcw23sv80j9bp";
+        package = "packages/cppo/cppo.1.6.8";
+        hash = "sha256:0pzd8irqkkkpfgw8nq9d21z9rj5m3qlzixyb7ybfy4b1fwh3n8bp";
       };
     };
     csexp = 
@@ -196,25 +196,6 @@ in
       {
         package = "packages/csexp/csexp.1.5.1";
         hash = "sha256:01lc95kz13gpki4xazyh6n20kv1g9inyb5myv240wl2n9v50z8fl";
-      };
-    };
-    dot-merlin-reader = 
-    {
-      pname = "dot-merlin-reader";
-      version = "4.1";
-      src = pkgs.fetchurl 
-      {
-        url = "https://github.com/ocaml/merlin/releases/download/v4.1/dot-merlin-reader-v4.1.tbz";
-        sha256 = "1kg765h6gqq5ffa1fdvm0kpa9w922y3af804ags5ssk4p1pnv8ql";
-      };
-      opamInputs = 
-      {
-        inherit (selection) yojson result ocamlfind ocaml dune csexp;
-      };
-      opamSrc = repoPath (repos.opam-repository.src) 
-      {
-        package = "packages/dot-merlin-reader/dot-merlin-reader.4.1";
-        hash = "sha256:1cs765ls6zkv2vakmzg0b7gmqvj6dxk0c0hvk46573zkqmw8vpcr";
       };
     };
     dune = 
@@ -395,11 +376,11 @@ in
     menhir = 
     {
       pname = "menhir";
-      version = "20210419";
+      version = "20211012";
       src = pkgs.fetchurl 
       {
-        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20210419/archive.tar.gz";
-        sha256 = "1z471apfcfs9d1s85wg33z5prfnifzx07dprjxq4fgfpcbqpqh7q";
+        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20211012/archive.tar.gz";
+        sha256 = "0sjhh4r793p297ywjrygjjz9hmhrmld0vfm53kqqcimp8vr1wxd2";
       };
       opamInputs = 
       {
@@ -407,50 +388,50 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/menhir/menhir.20210419";
-        hash = "sha256:1mcdqlg5v8xizca1mg228vfxhvlkzldls7nsipvn6b57qlab9jha";
+        package = "packages/menhir/menhir.20211012";
+        hash = "sha256:17ryhvbg6yaxsai77s2d37sf132rvkcv57ilm33nl5zlgclw6b60";
       };
     };
     menhirLib = 
     {
       pname = "menhirLib";
-      version = "20210419";
+      version = "20211012";
       src = pkgs.fetchurl 
       {
-        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20210419/archive.tar.gz";
-        sha256 = "1z471apfcfs9d1s85wg33z5prfnifzx07dprjxq4fgfpcbqpqh7q";
+        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20211012/archive.tar.gz";
+        sha256 = "0sjhh4r793p297ywjrygjjz9hmhrmld0vfm53kqqcimp8vr1wxd2";
       };
       opamInputs = {
                      inherit (selection) ocaml dune;
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/menhirLib/menhirLib.20210419";
-        hash = "sha256:02hwjxzc90927pp1ia03jgmkmq17a2dhpyg56kvsn6n2rlv009kg";
+        package = "packages/menhirLib/menhirLib.20211012";
+        hash = "sha256:0m32qmix5g25h883154v64429yjvf8bjmf583hxfw1mnhl4fplqh";
       };
     };
     menhirSdk = 
     {
       pname = "menhirSdk";
-      version = "20210419";
+      version = "20211012";
       src = pkgs.fetchurl 
       {
-        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20210419/archive.tar.gz";
-        sha256 = "1z471apfcfs9d1s85wg33z5prfnifzx07dprjxq4fgfpcbqpqh7q";
+        url = "https://gitlab.inria.fr/fpottier/menhir/-/archive/20211012/archive.tar.gz";
+        sha256 = "0sjhh4r793p297ywjrygjjz9hmhrmld0vfm53kqqcimp8vr1wxd2";
       };
       opamInputs = {
                      inherit (selection) ocaml dune;
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/menhirSdk/menhirSdk.20210419";
-        hash = "sha256:03w3lp0ih6livh4bd570qlh37iaf7xywap27jdma8064lb1fmr9b";
+        package = "packages/menhirSdk/menhirSdk.20211012";
+        hash = "sha256:0gw6smpyzmb6g25ch74ji7asf1f8pbwp8ngpz7hn6ynnr6njcyln";
       };
     };
     ocaml = 
     {
       pname = "ocaml";
-      version = "4.12.0";
+      version = "4.13.1";
       src = null;
       opamInputs = 
       {
@@ -462,25 +443,25 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/ocaml/ocaml.4.12.0";
-        hash = "sha256:11mxrkiixqfyv0arpx57xk9kfa1an749lnbx6saf4h616llb5sj9";
+        package = "packages/ocaml/ocaml.4.13.1";
+        hash = "sha256:1ahflchxawi94yk4vwdhihkdlw51x2f9ljwngmd9ymzh88lyzfpn";
       };
     };
     ocaml-base-compiler = 
     {
       pname = "ocaml-base-compiler";
-      version = "4.12.0";
+      version = "4.13.1";
       src = pkgs.fetchurl 
       {
-        url = "https://github.com/ocaml/ocaml/archive/4.12.0.tar.gz";
-        sha256 = "0i37laikik5vwydw1cwygxd8xq2d6n35l20irgrh691njlwpmh5d";
+        url = "https://github.com/ocaml/ocaml/archive/4.13.1.tar.gz";
+        sha256 = "1i7ad8lh5l74wb3yzmhlv529wc75a5sjybzkad7wdl8zrj47jk0r";
       };
       opamInputs = {
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/ocaml-base-compiler/ocaml-base-compiler.4.12.0";
-        hash = "sha256:06c7jb58zqqjd0vbg27k4n4v69xqfzjfcm89i43a2j7r7frjlwn1";
+        package = "packages/ocaml-base-compiler/ocaml-base-compiler.4.13.1";
+        hash = "sha256:069i5vsndd9lsvdm5wk898nfnc85ww7459nibjg6881ww43w8ck1";
       };
     };
     ocaml-compiler-libs = 
@@ -521,22 +502,14 @@ in
     ocaml-lsp-server = 
     {
       pname = "ocaml-lsp-server";
-      version = "1.7.0";
-      src = pkgs.fetchurl 
-      {
-        url = "https://github.com/ocaml/ocaml-lsp/releases/download/1.7.0/jsonrpc-1.7.0.tbz";
-        sha256 = "1va2zj41znsr94bdw485vak96zrcvqwcrqf1sy8zipb6hdhbchya";
-      };
+      version = "development";
+      src = self.directSrc "ocaml-lsp-server";
       opamInputs = 
       {
-        inherit (selection) yojson result re ppx_yojson_conv_lib pp ocaml
-        dune-build-info dune dot-merlin-reader csexp;
+        inherit (selection) yojson spawn result re ppx_yojson_conv_lib pp
+        ocamlformat-rpc-lib ocaml dune-build-info dune csexp;
       };
-      opamSrc = repoPath (repos.opam-repository.src) 
-      {
-        package = "packages/ocaml-lsp-server/ocaml-lsp-server.1.7.0";
-        hash = "sha256:165jy8rw8zskz9ryx0yck0kg9gbkbyqzrwr9m78x7apigbbkyfj4";
-      };
+      opamSrc = "ocaml-lsp-server.opam";
     };
     ocamlbuild = 
     {
@@ -594,7 +567,7 @@ in
       opamSrc = repoPath (repos.opam-repository.src) 
       {
         package = "packages/ocamlformat-rpc/ocamlformat-rpc.0.19.0";
-        hash = "sha256:02kmbgh905gr7ic717374wl5139qjm07vhi4zg3ryhf531mwxp93";
+        hash = "sha256:1r7g2729822sscawjgz9nfsggzv7c3vcxw8dffx56l25hdcwma7x";
       };
     };
     ocamlformat-rpc-lib = 
@@ -783,7 +756,7 @@ in
       opamSrc = repoPath (repos.opam-repository.src) 
       {
         package = "packages/ppx_derivers/ppx_derivers.1.2.1";
-        hash = "sha256:0r8rjp4m5jfbf3wz8qlgh82pxjws4arjwxhqq0zjglby6l6h8p3x";
+        hash = "sha256:1hj1ina0n7pgz16mrvijczapw75pd0hif0i18dpw7d1fyg2qr8py";
       };
     };
     ppx_enumerate = 
@@ -808,11 +781,11 @@ in
     ppx_expect = 
     {
       pname = "ppx_expect";
-      version = "v0.14.1";
+      version = "v0.14.2";
       src = pkgs.fetchurl 
       {
-        url = "https://github.com/janestreet/ppx_expect/archive/v0.14.1.tar.gz";
-        sha256 = "188zaqdqxqw9xbga1ip4yi5f9p41zgdqr51idcnw4yayvdxg81q3";
+        url = "https://github.com/janestreet/ppx_expect/archive/v0.14.2.tar.gz";
+        sha256 = "1gcjlya6knnsrl60sd3vlgp7arj39xm5fjjfk5sick4z66agm2n5";
       };
       opamInputs = 
       {
@@ -821,8 +794,8 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/ppx_expect/ppx_expect.v0.14.1";
-        hash = "sha256:15qiv5ggyxxm3zwm1as6f29vnmnw9zksc2wib9l5lgp040zbcj70";
+        package = "packages/ppx_expect/ppx_expect.v0.14.2";
+        hash = "sha256:14hnawvs9fc87kghg00zj0p1p21f22gdy1767l2nwb4ihl3h133b";
       };
     };
     ppx_hash = 
@@ -1001,19 +974,19 @@ in
     re = 
     {
       pname = "re";
-      version = "1.9.0";
+      version = "1.10.3";
       src = pkgs.fetchurl 
       {
-        url = "https://github.com/ocaml/ocaml-re/releases/download/1.9.0/re-1.9.0.tbz";
-        sha256 = "1gas4ky49zgxph3870nffzkr6y41kkpqp4nj38pz1gh49zcf12aj";
+        url = "https://github.com/ocaml/ocaml-re/releases/download/1.10.3/re-1.10.3.tbz";
+        sha256 = "1fqfg609996bgxr14yyfxhvl6hm9c1j0mm2xjdjigqrzgyb4crc4";
       };
       opamInputs = {
                      inherit (selection) seq ocaml dune;
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/re/re.1.9.0";
-        hash = "sha256:0k3x6z24l4r0wbl39m85nv92lfgipvzwk066mmbm8ph4pqmc3dy9";
+        package = "packages/re/re.1.10.3";
+        hash = "sha256:1f2xgscc07g800ia8z43i1p377dj2fjdrpzsqgzvw1dnplwnklya";
       };
     };
     result = 
@@ -1064,6 +1037,24 @@ in
       {
         package = "packages/sexplib0/sexplib0.v0.14.0";
         hash = "sha256:0k9vkjbiibja48c0yayal7xwyik3h3c3v4dwd3j7jbmras63ig2c";
+      };
+    };
+    spawn = 
+    {
+      pname = "spawn";
+      version = "v0.14.0";
+      src = pkgs.fetchurl 
+      {
+        url = "https://github.com/janestreet/spawn/releases/download/v0.14.0/spawn-v0.14.0.tbz";
+        sha256 = "153x03v5ji6wg30i45lxxd057lyqysrxndriaw8ssvr3mlylfyqs";
+      };
+      opamInputs = {
+                     inherit (selection) ocaml dune;
+      };
+      opamSrc = repoPath (repos.opam-repository.src) 
+      {
+        package = "packages/spawn/spawn.v0.14.0";
+        hash = "sha256:0mllm9byw1w9kl04i8wgrz2rkzsff0q3ki4qf5cripwhfi2as9ph";
       };
     };
     stdio = 
@@ -1125,11 +1116,11 @@ in
     topkg = 
     {
       pname = "topkg";
-      version = "1.0.3";
+      version = "1.0.4";
       src = pkgs.fetchurl 
       {
-        url = "http://erratique.ch/software/topkg/releases/topkg-1.0.3.tbz";
-        sha256 = "0b77gsz9bqby8v77kfi4lans47x9p2lmzanzwins5r29maphb8y6";
+        url = "https://erratique.ch/software/topkg/releases/topkg-1.0.4.tbz";
+        sha256 = "1kzw5cxkizcvh4rgzwgpjlj9hfxfk6yr686bxx6wrbsfs8as371k";
       };
       opamInputs = 
       {
@@ -1137,8 +1128,8 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/topkg/topkg.1.0.3";
-        hash = "sha256:1asjip3cr84b1n1n4q8b5zrcki87niz6imb9m9zaj2kqdywmp0m5";
+        package = "packages/topkg/topkg.1.0.4";
+        hash = "sha256:0gvngd4nayhhw02gcsljvmx6jkjpv9m3mqwpgimcfq04h0cf4knb";
       };
     };
     uchar = 
@@ -1162,11 +1153,11 @@ in
     uucp = 
     {
       pname = "uucp";
-      version = "13.0.0";
+      version = "14.0.0";
       src = pkgs.fetchurl 
       {
-        url = "https://erratique.ch/software/uucp/releases/uucp-13.0.0.tbz";
-        sha256 = "19kf8ypxaakacgg1dwwfzkc2zicaj88cmw11fw2z7zl24dn4gyiq";
+        url = "https://erratique.ch/software/uucp/releases/uucp-14.0.0.tbz";
+        sha256 = "1yx9nih3d9prb9zizq8fzmmqylf24a6yifhf81h33znrj5xn1mpj";
       };
       opamInputs = 
       {
@@ -1178,18 +1169,18 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/uucp/uucp.13.0.0";
-        hash = "sha256:0chi9ydylzc4ra8xhxn9ay5p1cish0mmzna6ppd8pa51pld3qjkx";
+        package = "packages/uucp/uucp.14.0.0";
+        hash = "sha256:03h0lnfnb4sad9lndnv8p5ylpwvp8gzqs9dk3v3cz9vz156fi99d";
       };
     };
     uuseg = 
     {
       pname = "uuseg";
-      version = "13.0.0";
+      version = "14.0.0";
       src = pkgs.fetchurl 
       {
-        url = "https://erratique.ch/software/uuseg/releases/uuseg-13.0.0.tbz";
-        sha256 = "1a635j8ra6p27g1ivfln3387lhwqmf6vq4r6bn7b6n1qsqyi1rls";
+        url = "https://erratique.ch/software/uuseg/releases/uuseg-14.0.0.tbz";
+        sha256 = "1g9zyzjkhqxgbb9mh3cgaawscwdazv6y8kdqvmy6yhnimmfqv25p";
       };
       opamInputs = 
       {
@@ -1200,8 +1191,8 @@ in
       };
       opamSrc = repoPath (repos.opam-repository.src) 
       {
-        package = "packages/uuseg/uuseg.13.0.0";
-        hash = "sha256:12s9hqb0k949gj9qj4jbham7r6lra9jmdvy6zjws9wa7dr7rjhmk";
+        package = "packages/uuseg/uuseg.14.0.0";
+        hash = "sha256:0j96m881gh80g7sfy8va4l2w7gmijv7dznk38ndl33k6pyhdikna";
       };
     };
     uutf = 

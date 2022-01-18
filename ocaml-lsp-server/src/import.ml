@@ -5,13 +5,13 @@ include struct
   module Array = Array
   module Code_error = Code_error
   module Comparable = Comparable
-  module Dyn = Dyn
   module Exn_with_backtrace = Exn_with_backtrace
   module Fdecl = Fdecl
   module Fpath = Path
   module Int = Int
   module List = List
   module Map = Map
+  module Monoid = Monoid
   module Option = Option
   module Ordering = Ordering
   module Pid = Pid
@@ -19,6 +19,7 @@ include struct
   module Result = Result
   module String = String
   module Table = Table
+  module Tuple = Tuple
   module Unix_env = Env
   module Io = Io
 
@@ -77,12 +78,14 @@ include struct
   module DidChangeConfigurationParams = DidChangeConfigurationParams
   module DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams
   module DidOpenTextDocumentParams = DidOpenTextDocumentParams
+  module DocumentFilter = DocumentFilter
   module DocumentHighlight = DocumentHighlight
   module DocumentHighlightKind = DocumentHighlightKind
   module DocumentHighlightParams = DocumentHighlightParams
   module DocumentSymbol = DocumentSymbol
   module DocumentUri = DocumentUri
   module ExecuteCommandOptions = ExecuteCommandOptions
+  module ExecuteCommandParams = ExecuteCommandParams
   module FoldingRange = FoldingRange
   module FoldingRangeParams = FoldingRangeParams
   module Hover = Hover
@@ -101,6 +104,8 @@ include struct
   module ProgressToken = ProgressToken
   module PublishDiagnosticsParams = PublishDiagnosticsParams
   module ReferenceParams = ReferenceParams
+  module Registration = Registration
+  module RegistrationParams = RegistrationParams
   module RenameOptions = RenameOptions
   module RenameParams = RenameParams
   module SelectionRange = SelectionRange
@@ -115,11 +120,15 @@ include struct
   module SignatureInformation = SignatureInformation
   module SymbolInformation = SymbolInformation
   module SymbolKind = SymbolKind
+  module TextDocumentClientCapabilities = TextDocumentClientCapabilities
   module TextDocumentContentChangeEvent = TextDocumentContentChangeEvent
   module TextDocumentEdit = TextDocumentEdit
   module TextDocumentIdentifier = TextDocumentIdentifier
+  module TextDocumentItem = TextDocumentItem
+  module TextDocumentRegistrationOptions = TextDocumentRegistrationOptions
   module TextDocumentSyncKind = TextDocumentSyncKind
   module TextDocumentSyncOptions = TextDocumentSyncOptions
+  module TextDocumentSyncClientCapabilities = TextDocumentSyncClientCapabilities
   module TextEdit = TextEdit
   module TraceValue = TraceValue
   module VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier
@@ -129,6 +138,7 @@ include struct
   module WorkDoneProgressReport = WorkDoneProgressReport
   module WorkspaceEdit = WorkspaceEdit
   module WorkspaceFolder = WorkspaceFolder
+  module WorkspaceFoldersChangeEvent = WorkspaceFoldersChangeEvent
   module WorkspaceSymbolParams = WorkspaceSymbolParams
   module WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities
 end

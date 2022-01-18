@@ -41,9 +41,9 @@ let%expect_test "start and stop server" =
     let run = Jrpc.run jrpc in
     Fiber.fork_and_join_unit (fun () -> run) (fun () -> Jrpc.stop jrpc)
   in
-  let () = Fiber_test.test Dyn.Encoder.opaque (run ()) in
+  let () = Fiber_test.test Dyn.Encoder.opaque run in
   [%expect {|
-    "<opaque>" |}]
+    <opaque> |}]
 
 let%expect_test "server accepts notifications" =
   let notif =
@@ -66,10 +66,10 @@ let%expect_test "server accepts notifications" =
     in
     Jrpc.run jrpc
   in
-  Fiber_test.test Dyn.Encoder.opaque (run ());
+  Fiber_test.test Dyn.Encoder.opaque run;
   [%expect {|
     received notification
-    "<opaque>" |}]
+    <opaque> |}]
 
 let of_ref ref =
   Fiber.Stream.Out.create (function
@@ -104,11 +104,11 @@ let%expect_test "serving requests" =
         let json = Jsonrpc.yojson_of_packet resp in
         print_endline (Yojson.Safe.pretty_to_string ~std:false json))
   in
-  Fiber_test.test Dyn.Encoder.opaque (run ());
+  Fiber_test.test Dyn.Encoder.opaque run;
   [%expect
     {|
     { "id": 1, "jsonrpc": "2.0", "result": "response" }
-    "<opaque>" |}]
+    <opaque> |}]
 
 (* The current client/server implement has no concurrent handling of requests.
    We can show this when we try to send a request when handling a response. *)
@@ -183,7 +183,7 @@ let%expect_test "concurrent requests" =
   let all = [ Jrpc.run waiter; Jrpc.run waitee ] in
   let all = initial_request () :: all in
   let run () = Fiber.parallel_iter all ~f:Fun.id in
-  Fiber_test.test Dyn.Encoder.opaque (run ());
+  Fiber_test.test Dyn.Encoder.opaque run;
   [%expect
     {|
     initial: waitee requests from waiter
@@ -244,15 +244,14 @@ let%expect_test "test from jsonrpc_test.ml" =
   in
   let session = Jrpc.create ~on_notification ~on_request ~name:"test" chan () in
   let write_reqs () =
-    let open Fiber.O in
     let* () =
       Fiber.sequential_iter initial_requests ~f:(fun req ->
           Out.write reqs_out (Some req))
     in
     Out.write reqs_out None
   in
-  Fiber_test.test Dyn.Encoder.opaque
-    (Fiber.fork_and_join_unit write_reqs (fun () -> Jrpc.run session));
+  Fiber_test.test Dyn.Encoder.opaque (fun () ->
+      Fiber.fork_and_join_unit write_reqs (fun () -> Jrpc.run session));
   List.rev !responses
   |> List.iter ~f:(fun packet ->
          let json = Jsonrpc.yojson_of_packet packet in
@@ -267,6 +266,6 @@ let%expect_test "test from jsonrpc_test.ml" =
     { "method": "raise", "jsonrpc": "2.0" }
     Error:
     [ { exn = "(Failure \"special failure\")"; backtrace = "" } ]
-    "<opaque>"
+    <opaque>
     { "id": 10, "jsonrpc": "2.0", "result": 1 }
     { "id": "testing", "jsonrpc": "2.0", "result": 2 } |}]

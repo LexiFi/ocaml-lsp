@@ -1,4 +1,5 @@
 open Import
+open Fiber.O
 
 type enabled =
   { (* TODO this needs to be mutexed *)
@@ -36,7 +37,6 @@ let end_build_if_running = function
   | Enabled e -> end_build e ~message:"Build interrupted"
 
 let start_build (t : enabled) =
-  let open Fiber.O in
   let* () = end_build t ~message:"Starting new build" in
   let token = `String ("dune-build-" ^ Int.to_string t.build_counter) in
   t.token <- Some token;
@@ -56,7 +56,6 @@ let build_progress t (progress : Drpc.Progress.t) =
   match t with
   | Disabled -> Code_error.raise "progress reporting is not supported" []
   | Enabled ({ token; report_progress; _ } as t) -> (
-    let open Fiber.O in
     match progress with
     | Success -> end_build t ~message:"Build finished"
     | Failed -> end_build t ~message:"Build failed"
@@ -71,18 +70,19 @@ let build_progress t (progress : Drpc.Progress.t) =
              build. *)
           start_build t
       in
+      let total = complete + remaining in
+      (* The percentage is useless as it isn't monotinically increasing as the
+         spec requires, but it's the best we can do. *)
       let percentage =
-        let fraction =
-          float_of_int complete /. float_of_int (complete + remaining)
-        in
+        let fraction = float_of_int complete /. float_of_int total in
         int_of_float (fraction *. 100.)
       in
       report_progress
         (ProgressParams.create ~token
            ~value:
              (Server_notification.Progress.Report
-                (WorkDoneProgressReport.create ~percentage ~message:"Building"
-                   ()))))
+                (let message = sprintf "Building [%d/%d]" complete total in
+                 WorkDoneProgressReport.create ~percentage ~message ()))))
 
 let should_report_build_progress = function
   | Disabled -> false

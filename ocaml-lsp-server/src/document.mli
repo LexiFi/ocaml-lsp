@@ -8,32 +8,38 @@ module Syntax : sig
     | Reason
     | Ocamllex
     | Menhir
+    | Cram
+    | Dune
 
   val human_name : t -> string
 
   val markdown_name : t -> string
-
-  val of_fname : string -> t
 end
 
 module Kind : sig
   type t =
     | Intf
     | Impl
-
-  val of_fname : string -> t
 end
+
+val is_merlin : t -> bool
 
 val kind : t -> Kind.t
 
 val syntax : t -> Syntax.t
 
 val make :
-  Scheduler.timer -> Scheduler.thread -> DidOpenTextDocumentParams.t -> t
+     debounce:float
+  -> Merlin_config.t
+  -> merlin_thread:Scheduler.thread
+  -> DidOpenTextDocumentParams.t
+  -> t Fiber.t
 
 val timer : t -> Scheduler.timer
 
 val uri : t -> Uri.t
+
+val text : t -> string
 
 val source : t -> Msource.t
 
@@ -56,3 +62,5 @@ val close : t -> unit Fiber.t
 
     For instance, the counterparts of the file [/file.ml] are [/file.mli]. *)
 val get_impl_intf_counterparts : Uri.t -> Uri.t list
+
+val edit : t -> TextEdit.t -> WorkspaceEdit.t

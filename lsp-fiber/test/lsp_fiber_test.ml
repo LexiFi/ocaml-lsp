@@ -56,7 +56,7 @@ let test make_client make_server =
         print_endline "Successful termination of test";
         Scheduler.cancel_timer timer)
   in
-  Scheduler.run (run ());
+  Scheduler.run run;
   print_endline "[TEST] finished"
 
 module End_to_end_client = struct
@@ -66,7 +66,6 @@ module End_to_end_client = struct
          ~code:InternalError ())
 
   let on_notification (client : _ Client.t) n =
-    let open Fiber.O in
     let state = Client.state client in
     let received_notification = state in
     let req = Server_notification.to_jsonrpc n in
@@ -81,7 +80,6 @@ module End_to_end_client = struct
       let on_request = { Client.Handler.on_request } in
       Test.Client.run ~on_request ~on_notification received_notification io
     in
-    let open Fiber.O in
     let init () : unit Fiber.t =
       Format.eprintf "client: waiting for initialization@.%!";
       let* (_ : InitializeResult.t) = Client.initialized client in
@@ -125,7 +123,6 @@ module End_to_end_server = struct
       | Client_request.ExecuteCommand _ ->
         Format.eprintf "server: executing command@.%!";
         let result = `String "successful execution" in
-        let open Fiber.O in
         let* () =
           let* timer = Scheduler.create_timer ~delay:0.5 in
           Fiber.Pool.task detached ~f:(fun () ->
