@@ -1,16 +1,31 @@
 (** Low level module for sending/receiving jsonrpc packets across channels *)
-type t
 
-val make : in_channel -> out_channel -> t
+exception Error of string
 
-val read : t -> Jsonrpc.packet option
+module Make (Io : sig
+  type 'a t
 
-val send : t -> Jsonrpc.packet -> unit
+  val return : 'a -> 'a t
 
-val flush : t -> unit
+  val raise : exn -> 'a t
 
-val close_in : t -> unit
+  module O : sig
+    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
 
-val close_out : t -> unit
+    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
+  end
+end) (Chan : sig
+  type input
 
-val close : t -> unit
+  type output
+
+  val read_line : input -> string option Io.t
+
+  val read_exactly : input -> int -> string option Io.t
+
+  val write : output -> string -> unit Io.t
+end) : sig
+  val read : Chan.input -> Jsonrpc.packet option Io.t
+
+  val write : Chan.output -> Jsonrpc.packet -> unit Io.t
+end

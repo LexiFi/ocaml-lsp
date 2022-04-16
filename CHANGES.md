@@ -1,3 +1,75 @@
+# 1.11.0
+
+## Features
+
+- Add support for dune in watch mode. The lsp server will now display build
+  errors in the diagnostics and offer promotion code actions.
+
+- Re-introduce ocamlformat-rpc (#599, fixes #495)
+
+## Fixes
+
+- Fix workspace symbols that could have a wrong path in some cases
+  ([#675](https://github.com/ocaml/ocaml-lsp/pull/671))
+
+# 1.10.6
+
+## Fixes
+
+- Compatiblity with OCaml 4.14.0
+
+# 1.10.5
+
+## Fixes
+
+- Patch merlin to remove the result module
+
+# 1.10.4
+
+## Fixes
+
+- Use newer versions of ocamlformat-rpc-lib (fixes #697)
+
+# 1.10.3
+
+## Fixes
+
+- Fix more debouncing bugs (#629)
+
+# 1.10.2
+
+## Fixes
+
+- Catch merlin desturct exceptions (#626)
+- Fix broken debouncing (#627)
+
+# 1.10.1
+
+## Fixes
+
+- Fix executing ppx executables
+
+# 1.10.0
+
+## Features
+
+- Add better support for code folding: more folds and more precise folds
+
+## Fixes
+
+- Fix infer interface code action crash when implementation source does not
+  exist (#597)
+
+- Improve error message when the reason plugin for merlin is absent (#608)
+
+- Fix `chdir` races when running ppx (#550)
+
+- More accurate completion kinds.
+  New completion kinds for variants and fields. Removed inaccurate completion
+  kinds for constructors and types. (#510)
+
+- Fix handling request cancellation (#616)
+
 # 1.9.1
 
 ## Fixes

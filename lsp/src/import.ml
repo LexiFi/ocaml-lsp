@@ -44,18 +44,13 @@ module String = struct
     while !i <= last && !j < plen do
       if text.[!i + !j] <> pattern.[!j] then (
         incr i;
-        j := 0
-      ) else
-        incr j
+        j := 0)
+      else incr j
     done;
-    if !j < plen then
-      raise Not_found
-    else
-      !i
+    if !j < plen then raise Not_found else !i
 
   let replace_all ~pattern ~with_ text =
-    if pattern = "" then
-      text
+    if pattern = "" then text
     else
       match next_occurrence ~pattern text 0 with
       | exception Not_found -> text
@@ -77,8 +72,6 @@ end
 module Json = struct
   type t = Ppx_yojson_conv_lib.Yojson.Safe.t
 
-  let to_pretty_string (t : t) = Yojson.Safe.pretty_to_string ~std:false t
-
   let to_string t = Yojson.Safe.to_string t
 
   let of_string s = Yojson.Safe.from_string s
@@ -91,8 +84,6 @@ module Json = struct
 
   let yojson_of_list = Ppx_yojson_conv_lib.Yojson_conv.yojson_of_list
 
-  let pp ppf (t : t) = Yojson.Safe.pretty_print ppf t
-
   module Jsonable = Ppx_yojson_conv_lib.Yojsonable
 
   let bool b = `Bool b
@@ -102,13 +93,15 @@ module Json = struct
   let field_exn fields name conv =
     match field fields name conv with
     | Some f -> f
-    | None -> error ("missing field" ^ name) (`Assoc fields)
+    | None -> error ("missing field: " ^ name) (`Assoc fields)
 
   let rec of_dyn (t : Dyn.t) : t =
     match t with
     | Opaque -> `String "<opaque>"
     | Unit -> `String "()"
     | Int i -> `Int i
+    | Int32 i -> `Int (Int32.to_int i)
+    | Nativeint i -> `Int (Nativeint.to_int i)
     | Int64 i -> `Int (Int64.to_int i)
     | Bool b -> `Bool b
     | String s -> `String s
@@ -149,8 +142,7 @@ module Json = struct
       match c1 json with
       | s -> s
       | (exception Jsonrpc.Json.Of_json (_, _))
-      | (exception Conv.Of_yojson_error (_, _)) ->
-        c2 json
+      | (exception Conv.Of_yojson_error (_, _)) -> c2 json
   end
 
   module Option = struct
@@ -180,8 +172,9 @@ module Json = struct
     let untagged_union (type a) name (xs : (t -> a) list) (json : t) : a =
       match
         List.find_map xs ~f:(fun conv ->
-            try Some (conv json) with
-            | Ppx_yojson_conv_lib.Yojson_conv.Of_yojson_error (_, _) -> None)
+            try Some (conv json)
+            with Ppx_yojson_conv_lib.Yojson_conv.Of_yojson_error (_, _) ->
+              None)
       with
       | None -> error name json
       | Some x -> x
@@ -193,12 +186,9 @@ module Json = struct
         let ks, xs =
           List.partition_map xs ~f:(fun (k', v') ->
               if k = k' then
-                if `String v = v' then
-                  Left k
-                else
-                  error (sprintf "%s: incorrect key %s" name k) json
-              else
-                Right (k', v'))
+                if `String v = v' then Left k
+                else error (sprintf "%s: incorrect key %s" name k) json
+              else Right (k', v'))
         in
         match ks with
         | [] -> error (sprintf "%s: key %s not found" name k) json
@@ -261,8 +251,7 @@ module Json = struct
     match f (Jsonrpc.Message.Structured.to_json v) with
     | r -> Ok r
     | exception Ppx_yojson_conv_lib.Yojson_conv.Of_yojson_error (Failure msg, _)
-      ->
-      Error msg
+      -> Error msg
 
   let require_params json =
     match json with
@@ -275,4 +264,4 @@ module Json = struct
     | Ok x -> read_json_params f x
 end
 
-let sprintf = Stdune.sprintf
+let sprintf = Printf.sprintf

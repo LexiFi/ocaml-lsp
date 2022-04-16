@@ -29,7 +29,7 @@ let compare (x : t) (y : t) = Stdlib.compare x y
 let hash = Hashtbl.hash
 
 let to_dyn { scheme; authority; path } =
-  let open Dyn.Encoder in
+  let open Dyn in
   record
     [ ("scheme", (option string) scheme)
     ; ("authority", string authority)
@@ -46,10 +46,7 @@ let to_path t =
     |> String.replace_all ~pattern:"%3D" ~with_:"="
     |> String.replace_all ~pattern:"%3F" ~with_:"?"
   in
-  if Sys.win32 then
-    path
-  else
-    Filename.concat "/" path
+  Filename.concat "/" path
 
 let of_path (path : string) =
   let path = Uri_lexer.escape_path path in

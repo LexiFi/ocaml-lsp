@@ -1,7 +1,4 @@
 open Stdune
-open Fiber.O
-
-let printf = Printf.printf
 
 let print pp = Format.printf "%a@." Pp.to_fmt pp
 
@@ -11,8 +8,6 @@ module Scheduler : sig
   type t
 
   exception Never
-
-  val yield : unit -> unit Fiber.t
 
   val create : unit -> t
 
@@ -24,20 +19,17 @@ end = struct
 
   let create () = Queue.create ()
 
-  let yield () =
-    let ivar = Fiber.Ivar.create () in
-    let* t = Fiber.Var.get_exn t_var in
-    Queue.push t ivar;
-    Fiber.Ivar.read ivar
-
   exception Never
 
   let run t fiber =
     let fiber = Fiber.Var.set t_var t (fun () -> fiber) in
     Fiber.run fiber ~iter:(fun () ->
-        match Queue.pop t with
-        | None -> raise Never
-        | Some e -> Fiber.Fill (e, ()))
+        let next =
+          match Queue.pop t with
+          | None -> raise Never
+          | Some e -> Fiber.Fill (e, ())
+        in
+        Nonempty_list.[ next ])
 end
 
 let test ?(expect_never = false) to_dyn f =
@@ -49,8 +41,8 @@ let test ?(expect_never = false) to_dyn f =
     in
     Fiber.with_error_handler f ~on_error
   in
-  (try Scheduler.run (Scheduler.create ()) f |> to_dyn |> print_dyn with
-  | Scheduler.Never -> never_raised := true);
+  (try Scheduler.run (Scheduler.create ()) f |> to_dyn |> print_dyn
+   with Scheduler.Never -> never_raised := true);
   match (!never_raised, expect_never) with
   | false, false ->
     (* We don't raise in this case b/c we assume something else is being

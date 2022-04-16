@@ -27,10 +27,8 @@ let no_output () =
   let received_none = ref false in
   Out.create (function
     | None ->
-      if !received_none then
-        failwith "received None more than once"
-      else
-        received_none := true;
+      if !received_none then failwith "received None more than once"
+      else received_none := true;
       Fiber.return ()
     | Some _ -> failwith "unexpected element")
 
@@ -41,7 +39,7 @@ let%expect_test "start and stop server" =
     let run = Jrpc.run jrpc in
     Fiber.fork_and_join_unit (fun () -> run) (fun () -> Jrpc.stop jrpc)
   in
-  let () = Fiber_test.test Dyn.Encoder.opaque run in
+  let () = Fiber_test.test Dyn.opaque run in
   [%expect {|
     <opaque> |}]
 
@@ -66,7 +64,7 @@ let%expect_test "server accepts notifications" =
     in
     Jrpc.run jrpc
   in
-  Fiber_test.test Dyn.Encoder.opaque run;
+  Fiber_test.test Dyn.opaque run;
   [%expect {|
     received notification
     <opaque> |}]
@@ -104,7 +102,7 @@ let%expect_test "serving requests" =
         let json = Jsonrpc.yojson_of_packet resp in
         print_endline (Yojson.Safe.pretty_to_string ~std:false json))
   in
-  Fiber_test.test Dyn.Encoder.opaque run;
+  Fiber_test.test Dyn.opaque run;
   [%expect
     {|
     { "id": 1, "jsonrpc": "2.0", "result": "response" }
@@ -158,9 +156,8 @@ let%expect_test "concurrent requests" =
               let self = Context.session c in
               print_endline "waitee: stopping";
               let+ () = Jrpc.stop self in
-              print_endline "waitee: stopped"
-            ) else
-              Fiber.return ())
+              print_endline "waitee: stopped")
+            else Fiber.return ())
       in
       let state = Context.state c in
       Fiber.return (response, state)
@@ -171,19 +168,20 @@ let%expect_test "concurrent requests" =
   let waiter_in, waitee_out = pipe () in
   let waitee = waitee (waitee_in, waitee_out) in
   let waiter = waiter (waiter_in, waiter_out) in
-  let initial_request () =
-    let request =
-      Jsonrpc.Message.create ~id:(`String "initial") ~method_:"init" ()
+  let run () =
+    let initial_request () =
+      let request =
+        Jsonrpc.Message.create ~id:(`String "initial") ~method_:"init" ()
+      in
+      print_endline "initial: waitee requests from waiter";
+      let+ resp = Jrpc.request waitee request in
+      print_endline "initial request response:";
+      print (Response resp)
     in
-    print_endline "initial: waitee requests from waiter";
-    let+ resp = Jrpc.request waitee request in
-    print_endline "initial request response:";
-    print (Response resp)
+    Fiber.all_concurrently_unit
+      [ Jrpc.run waitee; initial_request (); Jrpc.run waiter ]
   in
-  let all = [ Jrpc.run waiter; Jrpc.run waitee ] in
-  let all = initial_request () :: all in
-  let run () = Fiber.parallel_iter all ~f:Fun.id in
-  Fiber_test.test Dyn.Encoder.opaque run;
+  Fiber_test.test Dyn.opaque run;
   [%expect
     {|
     initial: waitee requests from waiter
@@ -250,7 +248,7 @@ let%expect_test "test from jsonrpc_test.ml" =
     in
     Out.write reqs_out None
   in
-  Fiber_test.test Dyn.Encoder.opaque (fun () ->
+  Fiber_test.test Dyn.opaque (fun () ->
       Fiber.fork_and_join_unit write_reqs (fun () -> Jrpc.run session));
   List.rev !responses
   |> List.iter ~f:(fun packet ->
@@ -265,7 +263,7 @@ let%expect_test "test from jsonrpc_test.ml" =
     Uncaught error when handling notification:
     { "method": "raise", "jsonrpc": "2.0" }
     Error:
-    [ { exn = "(Failure \"special failure\")"; backtrace = "" } ]
+    [ { exn = "Failure(\"special failure\")"; backtrace = "" } ]
     <opaque>
     { "id": 10, "jsonrpc": "2.0", "result": 1 }
     { "id": "testing", "jsonrpc": "2.0", "result": 2 } |}]
