@@ -26,7 +26,8 @@ let rec mark_value_unused_edit name contexts =
   match contexts with
   | Browse_raw.Pattern { pat_desc = Tpat_record (pats, _); _ } :: cs -> (
     let m_field_edit =
-      List.find_map pats
+      List.find_map
+        pats
         ~f:
           (function
            | ( { loc = field_loc; _ }
@@ -63,7 +64,7 @@ let rec mark_value_unused_edit name contexts =
   | Pattern { pat_desc = Tpat_var (ident, _); pat_loc = loc; _ } :: _ ->
     if Ident.name ident = name then
       let+ start = Position.of_lexical_position loc.loc_start in
-      TextEdit.{ range = Range.create ~start ~end_:start; newText = "_" }
+      { TextEdit.range = Range.create ~start ~end_:start; newText = "_" }
     else None
   | _ :: cs -> mark_value_unused_edit name cs
   | _ -> None
@@ -79,37 +80,48 @@ let code_action_mark_value_unused doc (diagnostic : Diagnostic.t) =
         |> mark_value_unused_edit var_name
       in
       let edit = Document.edit doc text_edit in
-      CodeAction.create ~diagnostics:[ diagnostic ] ~title:"Mark as unused"
-        ~kind:CodeActionKind.QuickFix ~edit ~isPreferred:false ())
+      CodeAction.create
+        ~diagnostics:[ diagnostic ]
+        ~title:"Mark as unused"
+        ~kind:CodeActionKind.QuickFix
+        ~edit
+        ~isPreferred:true
+        ())
 
 (* Takes a list of contexts enclosing a binding of `name`. Returns the range of
    the most specific binding. *)
 let enclosing_value_binding_range name =
   let open Option.O in
   List.find_map ~f:(function
-    | Browse_raw.Expression
-        { exp_desc =
-            Texp_let
-              ( _
-              , [ { vb_pat = { pat_desc = Tpat_var (_, { txt = name'; _ }); _ }
-                  ; _
-                  }
-                ]
-              , body )
-        ; exp_loc
-        ; _
-        }
-      when name = name' ->
-      let* start = Position.of_lexical_position exp_loc.loc_start in
-      let+ end_ = Position.of_lexical_position body.exp_loc.loc_start in
-      Range.create ~start ~end_
-    | _ -> None)
+      | Browse_raw.Expression
+          { exp_desc =
+              Texp_let
+                ( _
+                , [ { vb_pat =
+                        { pat_desc = Tpat_var (_, { txt = name'; _ }); _ }
+                    ; _
+                    }
+                  ]
+                , body )
+          ; exp_loc
+          ; _
+          }
+        when name = name' ->
+        let* start = Position.of_lexical_position exp_loc.loc_start in
+        let+ end_ = Position.of_lexical_position body.exp_loc.loc_start in
+        Range.create ~start ~end_
+      | _ -> None)
 
 (* Create a code action that removes [range] and refers to [diagnostic]. *)
 let code_action_remove_range doc (diagnostic : Diagnostic.t) range =
   let edit = Document.edit doc { range; newText = "" } in
-  CodeAction.create ~diagnostics:[ diagnostic ] ~title:"Remove unused"
-    ~kind:CodeActionKind.QuickFix ~edit ~isPreferred:false ()
+  CodeAction.create
+    ~diagnostics:[ diagnostic ]
+    ~title:"Remove unused"
+    ~kind:CodeActionKind.QuickFix
+    ~edit
+    ~isPreferred:false
+    ()
 
 (* Create a code action that removes the value mentioned in [diagnostic]. *)
 let code_action_remove_value doc pos (diagnostic : Diagnostic.t) =
@@ -128,7 +140,7 @@ let find_unused_diagnostic pos (ds : Diagnostic.t list) =
         | `Outside _ -> false
         | `Inside -> true
       in
-      in_range && Diagnostic_util.is_unused_var_warning d)
+      in_range && Diagnostic_util.is_unused_var_warning d.message)
 
 let code_action_mark doc (params : CodeActionParams.t) =
   let pos = params.range.start in

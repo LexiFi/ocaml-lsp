@@ -2,8 +2,9 @@
 
 TEST_E2E_DIR = ocaml-lsp-server/test/e2e
 
-$(TEST_E2E_DIR)/node_modules:
-	cd $(TEST_E2E_DIR) && yarn install
+.PHONY: yarn-install
+yarn-install:
+	cd $(TEST_E2E_DIR) && yarn --frozen-lockfile
 
 -include Makefile.dev
 
@@ -16,7 +17,7 @@ all:
 # results in a conflict
 .PHONY: install-test-deps
 install-test-deps:
-	opam install 'menhir>20211230' cinaps 'ppx_expect>=v0.14.0' \
+	opam install 'menhir>20211230' cinaps 'ppx_expect>=v0.15.0' \
 		ocamlformat.$$(awk -F = '$$1 == "version" {print $$2}' .ocamlformat) ocamlformat-rpc
 
 .PHONY: dev
@@ -34,7 +35,7 @@ install: ## Install the packages on the system
 lock: ## Generate the lock files
 	opam lock -y .
 
-.PHONY: test
+.PHONY: test-ocaml
 test-ocaml: ## Run the unit tests
 	dune build @lsp/test/runtest @lsp-fiber/runtest @jsonrpc-fiber/runtest @ocaml-lsp-server/runtest
 
@@ -47,11 +48,11 @@ check:
 	dune build @check
 
 .PHONY: test-e2e
-test-e2e: $(TEST_E2E_DIR)/node_modules ## Run the template integration tests
-	dune build @install && cd $(TEST_E2E_DIR) && dune exec -- yarn test
+test-e2e:
+	dune build @install && dune exec -- ocaml-lsp-server/test/run_test_e2e.exe
 
 .PHONY: promote-e2e
-promote-e2e: $(TEST_E2E_DIR)/node_modules
+promote-e2e:
 	dune build @install && cd $(TEST_E2E_DIR) && dune exec -- yarn run promote
 
 .PHONY: test
@@ -82,11 +83,13 @@ release: ## Release on Opam
 	dune-release opam pkg
 	dune-release opam submit
 
-.PHONY: nix/opam-selection.nix
-nix/opam-selection.nix:
-	nix-shell -A resolve default.nix
-
 .PHONY: nix-tests
 nix-tests:
 	(cd $(TEST_E2E_DIR) && yarn --frozen-lockfile)
 	make test
+
+.PHONY: nix-fmt
+nix-fmt:
+	$(MAKE) yarn-install
+	dune build @fmt --auto-promote
+	cd $(TEST_E2E_DIR) && yarn fmt

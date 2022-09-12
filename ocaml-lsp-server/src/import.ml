@@ -2,7 +2,29 @@
    listed alphabetically. Try to keep the order. *)
 include struct
   open Stdune
-  module Array = Array
+
+  module Array = struct
+    include Array
+    module View = Array_view
+
+    let split_into_subs arr ~at =
+      if at < 0 then
+        invalid_arg "split_into_subs: [~at] argument must be non-negative";
+      if at < Array.length arr then
+        let left = View.make arr ~pos:0 ~len:at () in
+        let right = View.make arr ~pos:at () in
+        (left, right)
+      else invalid_arg "split_into_subs: [~at] argument out of bounds of array"
+
+    let common_prefix_len ~equal (a : 'a array) (b : 'a array) : int =
+      let i = ref 0 in
+      let min_len = min (Array.length a) (Array.length b) in
+      while !i < min_len && equal (Array.get a !i) (Array.get b !i) do
+        incr i
+      done;
+      !i
+  end
+
   module Code_error = Code_error
   module Comparable = Comparable
   module Exn_with_backtrace = Exn_with_backtrace
@@ -17,6 +39,7 @@ include struct
   module Pid = Pid
   module Poly = Poly
   module Result = Result
+  module Queue = Queue
 
   module String = struct
     include String
@@ -69,10 +92,14 @@ include struct
   open Lsp
   module Client_notification = Client_notification
   module Client_request = Client_request
-  module Json = Import.Json
   module Server_request = Server_request
   module Text_document = Text_document
-  module Uri = Uri
+
+  module Uri = struct
+    include Uri
+
+    let to_dyn t = Dyn.string (to_string t)
+  end
 end
 
 (* Misc modules *)
@@ -83,7 +110,12 @@ module Ast_iterator = Ocaml_parsing.Ast_iterator
 module Asttypes = Ocaml_parsing.Asttypes
 module Cmt_format = Ocaml_typing.Cmt_format
 module Ident = Ocaml_typing.Ident
-module Loc = Ocaml_parsing.Location
+
+module Loc = struct
+  include Ocaml_parsing.Location
+  include Ocaml_parsing.Location_aux
+end
+
 module Longident = Ocaml_parsing.Longident
 module Parsetree = Ocaml_parsing.Parsetree
 module Path = Ocaml_typing.Path
@@ -102,10 +134,11 @@ module Browse_raw = Merlin_specific.Browse_raw
    listed alphabetically. Try to keep the order. *)
 include struct
   open Lsp_fiber
-  module Log = Import.Log
+  module Log = Private.Log
   module Reply = Rpc.Reply
   module Server = Server
   module Lazy_fiber = Lsp_fiber.Lazy_fiber
+  module Json = Json
 end
 
 (* All modules from [Lsp.Types] should be in the struct below. The modules are
@@ -143,9 +176,11 @@ include struct
   module CompletionOptions = CompletionOptions
   module CompletionParams = CompletionParams
   module ConfigurationParams = ConfigurationParams
+  module CreateFile = CreateFile
   module Diagnostic = Diagnostic
   module DiagnosticRelatedInformation = DiagnosticRelatedInformation
   module DiagnosticSeverity = DiagnosticSeverity
+  module DiagnosticTag = DiagnosticTag
   module DidChangeConfigurationParams = DidChangeConfigurationParams
   module DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams
   module DidOpenTextDocumentParams = DidOpenTextDocumentParams
@@ -181,9 +216,20 @@ include struct
   module RenameParams = RenameParams
   module SelectionRange = SelectionRange
   module SelectionRangeParams = SelectionRangeParams
+  module SemanticTokens = SemanticTokens
+  module SemanticTokensEdit = SemanticTokensEdit
+  module SemanticTokensLegend = SemanticTokensLegend
+  module SemanticTokensDelta = SemanticTokensDelta
+  module SemanticTokensDeltaParams = SemanticTokensDeltaParams
+  module SemanticTokenModifiers = SemanticTokenModifiers
+  module SemanticTokensOptions = SemanticTokensOptions
+  module SemanticTokensParams = SemanticTokensParams
   module ServerCapabilities = ServerCapabilities
   module Server_notification = Lsp.Server_notification
   module SetTraceParams = SetTraceParams
+  module ShowDocumentClientCapabilities = ShowDocumentClientCapabilities
+  module ShowDocumentParams = ShowDocumentParams
+  module ShowDocumentResult = ShowDocumentResult
   module ShowMessageParams = ShowMessageParams
   module SignatureHelp = SignatureHelp
   module SignatureHelpOptions = SignatureHelpOptions
@@ -194,6 +240,7 @@ include struct
   module TextDocumentClientCapabilities = TextDocumentClientCapabilities
   module TextDocumentContentChangeEvent = TextDocumentContentChangeEvent
   module TextDocumentEdit = TextDocumentEdit
+  module TextDocumentFilter = TextDocumentFilter
   module TextDocumentIdentifier = TextDocumentIdentifier
   module TextDocumentItem = TextDocumentItem
   module TextDocumentRegistrationOptions = TextDocumentRegistrationOptions
@@ -201,7 +248,11 @@ include struct
   module TextDocumentSyncOptions = TextDocumentSyncOptions
   module TextDocumentSyncClientCapabilities = TextDocumentSyncClientCapabilities
   module TextEdit = TextEdit
-  module TraceValue = TraceValue
+
+  (** deprecated *)
+  module TraceValue = TraceValues
+
+  module TraceValues = TraceValues
   module Unregistration = Unregistration
   module UnregistrationParams = UnregistrationParams
   module VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier

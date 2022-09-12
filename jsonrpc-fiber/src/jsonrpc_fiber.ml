@@ -29,16 +29,16 @@ module Sender = struct
         t.send r)
 end
 
-exception Stopped of Message.request
+exception Stopped of Request.t
 
 let () =
   Printexc.register_printer (function
-    | Stopped req ->
-      let json = Message.yojson_of_request req in
-      Some
-        ("Session closed. Request will not be answered. "
-       ^ Json.to_pretty_string json)
-    | _ -> None)
+      | Stopped req ->
+        let json = Request.yojson_of_t req in
+        Some
+          ("Session closed. Request will not be answered. "
+         ^ Json.to_pretty_string json)
+      | _ -> None)
 
 module Reply = struct
   type t =
@@ -58,18 +58,20 @@ end
 module Make (Chan : sig
   type t
 
-  val send : t -> packet list -> unit Fiber.t
+  val send : t -> Packet.t list -> unit Fiber.t
 
-  val recv : t -> packet option Fiber.t
+  val recv : t -> Packet.t option Fiber.t
 
   val close : t -> [ `Read | `Write ] -> unit Fiber.t
 end) =
 struct
   type 'state t =
     { chan : Chan.t
-    ; on_request : ('state, Id.t) context -> (Reply.t * 'state) Fiber.t
-    ; on_notification : ('state, unit) context -> (Notify.t * 'state) Fiber.t
-    ; pending : (Response.t, [ `Stopped ]) result Fiber.Ivar.t Id.Table.t
+    ; on_request : ('state, Request.t) context -> (Reply.t * 'state) Fiber.t
+    ; on_notification :
+        ('state, Notification.t) context -> (Notify.t * 'state) Fiber.t
+    ; pending :
+        (Response.t, [ `Stopped | `Cancelled ]) result Fiber.Ivar.t Id.Table.t
     ; stopped : unit Fiber.Ivar.t
     ; name : string
     ; mutable running : bool
@@ -78,7 +80,11 @@ struct
     ; mutable pending_requests_stopped : bool
     }
 
-  and ('a, 'id) context = 'a t * 'id Message.t
+  and ('a, 'message) context = 'a t * 'message
+
+  type cancel = unit Fiber.t
+
+  let fire cancel = cancel
 
   module Context = struct
     type nonrec ('a, 'id) t = ('a, 'id) context
@@ -99,13 +105,16 @@ struct
       | _ ->
         let message = Format.asprintf "%a" Exn_with_backtrace.pp_uncaught exn in
         let data = exn |> Exn_with_backtrace.to_dyn |> Json.of_dyn in
-        Response.Error.make ~code:InternalError ~data
-          ~message ()
+        Response.Error.make
+          ~code:InternalError
+          ~data
+          ~message:"uncaught exception"
+          ()
     in
     Response.error id error
 
   let on_request_fail ctx : (Reply.t * _) Fiber.t =
-    let req : Message.request = Context.message ctx in
+    let req : Request.t = Context.message ctx in
     let state = Context.state ctx in
     let error =
       Response.Error.make ~code:InternalError ~message:"not implemented" ()
@@ -129,7 +138,10 @@ struct
           in
           Id.Table.clear t.pending;
           Fiber.parallel_iter to_cancel ~f:(fun ivar ->
-              Fiber.Ivar.fill ivar (Error `Stopped))))
+              let* res = Fiber.Ivar.peek ivar in
+              match res with
+              | Some _ -> Fiber.return ()
+              | None -> Fiber.Ivar.fill ivar (Error `Stopped))))
 
   let create ?(on_request = on_request_fail)
       ?(on_notification = on_notification_fail) ~name chan state =
@@ -172,25 +184,18 @@ struct
       t.tick <- t.tick + 1;
       log t (fun () -> Log.msg "new tick" [ ("tick", `Int t.tick) ]);
       let* res = Chan.recv t.chan in
+      log t (fun () -> Log.msg "waited for something" []);
       match res with
       | None -> Fiber.return ()
       | Some packet -> (
         match packet with
-        | Message r -> on_message r
+        | Notification r -> on_notification r
+        | Request r -> on_request r
         | Response r ->
           let* () = Fiber.Pool.task later ~f:(fun () -> on_response r) in
-          loop ())
-    and on_message (r : _ Message.t) =
-      log t (fun () ->
-          let what =
-            match r.id with
-            | None -> "notification"
-            | Some _ -> "request"
-          in
-          Log.msg ("received " ^ what) [ ("r", Message.yojson_of_either r) ]);
-      match r.id with
-      | Some id -> on_request { r with id }
-      | None -> on_notification { r with id = () }
+          loop ()
+        | Batch_call _ -> Code_error.raise "batch requests aren't supported" []
+        | Batch_response _ -> assert false)
     and on_response r =
       let log (what : string) =
         log t (fun () ->
@@ -200,11 +205,15 @@ struct
       | None ->
         log "dropped";
         Fiber.return ()
-      | Some ivar ->
+      | Some ivar -> (
         log "acknowledged";
         Id.Table.remove t.pending r.id;
-        Fiber.Ivar.fill ivar (Ok r)
-    and on_request (r : Id.t Message.t) =
+        let* resp = Fiber.Ivar.peek ivar in
+        match resp with
+        | Some _ -> Fiber.return ()
+        | None -> Fiber.Ivar.fill ivar (Ok r))
+    and on_request (r : Request.t) =
+      log t (fun () -> Log.msg "handling request" []);
       let* result =
         let sent = ref false in
         Fiber.map_reduce_errors
@@ -218,6 +227,7 @@ struct
               Fiber.Pool.task later ~f:(fun () -> send_response response))
           (fun () -> t.on_request (t, r))
       in
+      log t (fun () -> Log.msg "received result" []);
       match result with
       | Error () -> loop ()
       | Ok (reply, state) ->
@@ -242,7 +252,7 @@ struct
               | Error () -> ())
         in
         loop ()
-    and on_notification (r : unit Message.t) : unit Fiber.t =
+    and on_notification (r : Notification.t) : unit Fiber.t =
       let* res = Fiber.collect_errors (fun () -> t.on_notification (t, r)) in
       match res with
       | Ok (next, state) -> (
@@ -252,8 +262,9 @@ struct
         | Continue -> loop ())
       | Error errors ->
         Format.eprintf
-          "Uncaught error when handling notification:@.%a@.Error:@.%s@." Json.pp
-          (Message.yojson_of_notification r)
+          "Uncaught error when handling notification:@.%a@.Error:@.%s@."
+          Json.pp
+          (Notification.yojson_of_t r)
           (Dyn.to_string (Dyn.list Exn_with_backtrace.to_dyn errors));
         loop ()
     in
@@ -269,14 +280,12 @@ struct
         close t)
 
   let check_running t =
-    (* TODO we should also error out when making requests after a disconnect. *)
     if not t.running then Code_error.raise "jsonrpc must be running" []
 
-  let notification t (req : Message.notification) =
+  let notification t (n : Notification.t) =
     Fiber.of_thunk (fun () ->
         check_running t;
-        let req = { req with Message.id = None } in
-        Chan.send t.chan [ Message req ])
+        Chan.send t.chan [ Notification n ])
 
   let register_request_ivar t id ivar =
     match Id.Table.find_opt t.pending id with
@@ -287,25 +296,41 @@ struct
     let+ res = Fiber.Ivar.read ivar in
     match res with
     | Ok s -> s
+    | Error `Cancelled -> assert false
     | Error `Stopped -> raise (Stopped req)
 
-  let request t (req : Message.request) =
+  let request t (req : Request.t) =
     Fiber.of_thunk (fun () ->
         check_running t;
-        let* () =
-          let req = { req with Message.id = Some req.id } in
-          Chan.send t.chan [ Message req ]
-        in
+        let* () = Chan.send t.chan [ Request req ] in
         let ivar = Fiber.Ivar.create () in
         register_request_ivar t req.id ivar;
         read_request_ivar req ivar)
 
+  let request_with_cancel t (req : Request.t) =
+    let ivar = Fiber.Ivar.create () in
+    let cancel = Fiber.Ivar.fill ivar (Error `Cancelled) in
+    let resp =
+      Fiber.of_thunk (fun () ->
+          check_running t;
+          let* () =
+            let+ () = Chan.send t.chan [ Request req ] in
+            register_request_ivar t req.id ivar
+          in
+          let+ res = Fiber.Ivar.read ivar in
+          match res with
+          | Ok s -> `Ok s
+          | Error `Cancelled -> `Cancelled
+          | Error `Stopped -> raise (Stopped req))
+    in
+    (cancel, resp)
+
   module Batch = struct
     type response =
-      Message.request * (Jsonrpc.Response.t, [ `Stopped ]) result Fiber.Ivar.t
+      Jsonrpc.Request.t
+      * (Jsonrpc.Response.t, [ `Stopped | `Cancelled ]) result Fiber.Ivar.t
 
-    type t =
-      [ `Notification of Message.notification | `Request of response ] list ref
+    type t = [ `Notification of Notification.t | `Request of response ] list ref
 
     let await (req, resp) = read_request_ivar req resp
 
@@ -329,10 +354,9 @@ struct
           List.fold_left pending ~init:([], []) ~f:(fun (pending, ivars) ->
             function
             | `Notification n ->
-              (Jsonrpc.Message { n with Message.id = None } :: pending, ivars)
-            | `Request ((r : Message.request), ivar) ->
-              ( Jsonrpc.Message { r with Message.id = Some r.id } :: pending
-              , (r.id, ivar) :: ivars ))
+              (Jsonrpc.Packet.Notification n :: pending, ivars)
+            | `Request ((r : Request.t), ivar) ->
+              (Jsonrpc.Packet.Request r :: pending, (r.id, ivar) :: ivars))
         in
         List.iter ivars ~f:(fun (id, ivar) -> register_request_ivar t id ivar);
         Chan.send t.chan pending)

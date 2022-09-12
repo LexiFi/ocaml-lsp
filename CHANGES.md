@@ -1,3 +1,104 @@
+# Unreleased
+
+## Features
+
+- Tag "unused code" and "deprecated" warnings, allowing clients to better
+  display them. (#848)
+
+## Fixes
+
+- Respect `showDocument` capabilities. Do not offer commands or code actions
+  that rely on this request without client support. (#836)
+
+- Fix signatureHelp on .mll files: avoid "Document.dune" exceptions
+
+# 1.13.1
+
+## Fixes
+
+- Fix cwd when executing ppx (#805)
+
+# 1.13.0
+
+## Features
+
+- Code actions for jumping to related files (`.ml`, `.mli`, etc.) (#795)
+
+# 1.12.4
+
+- Allow cancellation of workspace symbols requests (#777)
+
+- Fix unintentionally interleaved jsonrpc IO that would corrupt the session
+  (#786)
+
+- Ignore `SIGPIPE` . (#788)
+
+# 1.12.3
+
+## Fixes
+
+- Fix a bad interaction between inferred interfaces and promotion code actions
+  in watch mode (#753)
+
+- Fix URI parsing (#739 fixes #471 and #459)
+
+# 1.12.2
+
+## Fixes
+
+- Fix shutting down an already closed socket (#740)
+
+# 1.12.1
+
+## Fixes
+
+- Fix preprocessing, ppx, and reason support (#735 fixes #696, #706)
+
+- Support `include` in folding ranges (#730)
+
+# 1.12.0
+
+## Features
+
+- Fix cancellation mechanism for all requests (#707)
+
+- Allow cancellation of formatting requests (#707)
+
+- Add `--fallback-read-dot-merlin` to the LSP Server (#705). If `ocamllsp` is
+  started with this new flag, it will fall back to looking for Merlin
+  configuration in `.merlin` files rather than calling `dune ocaml-merlin`.
+  (#705)
+
+- Support folding more ranges (#692)
+
+# 1.11.6
+
+## Fixes
+
+- Stop leaking file descriptors like a sieve (#701)
+
+# 1.11.5
+
+- Fix process termination. Once the lsp server is stepped, the process will
+  gracefully terminate (#697, fixes #694)
+
+- Forward stderr from dune's merlin configuration to the lsp server's stderr
+  (#697)
+
+# 1.11.4
+
+## Fixes
+
+- Fix bug with large buffers being resized incorrectly in Lev
+
+- Add folding ranges for more AST types (#680)
+
+# 1.11.3
+
+## Fixes
+
+- Enable dune rpc integration by default (#691, fixes #690)
+
 # 1.11.2
 
 ## Fixes
@@ -55,6 +156,7 @@
 ## Fixes
 
 - Catch merlin desturct exceptions (#626)
+
 - Fix broken debouncing (#627)
 
 # 1.10.1

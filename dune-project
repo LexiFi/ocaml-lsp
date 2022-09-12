@@ -1,4 +1,4 @@
-(lang dune 2.9)
+(lang dune 3.0)
 (using menhir 2.0)
 (using cinaps 1.0)
 (name lsp)
@@ -6,7 +6,7 @@
 (implicit_transitive_deps false)
 
 (license ISC)
-(maintainers "Rudi Grinberg <me@rgrinerg.com>")
+(maintainers "Rudi Grinberg <me@rgrinberg.com>")
 (authors
  "Andrey Popp <8mayday@gmail.com>"
  "Rusty Key <iam@stfoo.ru>"
@@ -32,9 +32,11 @@ possible and does not make any assumptions about IO.
 ")
  (depends
   (jsonrpc (= :version))
-  dyn
   yojson
   (ppx_yojson_conv_lib (>= "v0.14"))
+  (cinaps :with-test)
+  (menhir (and (>= 20211230) :with-test))
+  (ppx_expect (and (>= v0.15.0) :with-test))
   (uutf (>= 1.0.2))
   (odoc :with-doc)
   (ocaml (>= 4.12))))
@@ -47,15 +49,16 @@ possible and does not make any assumptions about IO.
   yojson
   (re (>= 1.5.0))
   (ppx_yojson_conv_lib (>= "v0.14"))
-  dune-rpc
+  (dune-rpc (>= 3.4.0))
+  (chrome-trace (>= 3.3.0))
   dyn
   stdune
-  fiber
+  (fiber (>= 3.1.1))
   xdg
   ordering
   dune-build-info
   spawn
-  (omd (<= 1.3.1))
+  (omd (and (>= 1.3.2) (< 2.0.0~alpha1)))
   (octavius (>= 1.2.2))
   (uutf (>= 1.0.2))
   (pp (>= 1.1.2))

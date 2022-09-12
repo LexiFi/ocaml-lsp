@@ -1,11 +1,25 @@
+(** Fetch merlin configuration with dune subprocesses *)
+
 open Import
 
 type t
 
-val create : unit -> t
+val should_read_dot_merlin : bool ref
 
-val stop : t -> unit Fiber.t
+val config : t -> Mconfig.t Fiber.t
 
-val run : t -> unit Fiber.t
+val destroy : t -> unit Fiber.t
 
-val get_external_config : t -> Mconfig.t -> string -> Mconfig.t Fiber.t
+module DB : sig
+  type config := t
+
+  type t
+
+  val create : unit -> t
+
+  val stop : t -> unit Fiber.t
+
+  val run : t -> unit Fiber.t
+
+  val get : t -> Uri.t -> config
+end

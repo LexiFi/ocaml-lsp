@@ -18,104 +18,21 @@ let skipped_ts_decls =
   ; "MarkedString"
   ; "ProgressToken"
   ; "ProgressParams"
+  ; "TextDocumentFilter"
+  ; "PrepareRenameResult"
+  ; "LSPAny"
+  ; "LSPObject"
+  ; "LSPArray"
+  ; "LSPErrorCodes"
+  ; "NotebookDocumentSyncOptions"
+  ; "NotebookDocumentFilter"
+  ; "NotebookDocumentSyncRegistrationOptions"
+  ; "URI"
   ]
 
-(* Super classes to remove because we handle their concerns differently (or not
-   at all) *)
-let removed_super_classes = []
-
-(* The preprocessing stage maps over the typescript AST. It should only do very
-   simple clean ups *)
-let preprocess =
-  let union_fields l1 l2 ~f =
-    let of_map =
-      String.Map.of_list_map_exn ~f:(fun (x : _ Named.t) -> (x.name, x))
-    in
-    String.Map.union (of_map l1) (of_map l2) ~f |> String.Map.values
-  in
-  let open Unresolved in
-  let traverse =
-    object (self)
-      inherit Unresolved.map as super
-
-      val mutable current_name = None
-
-      method name =
-        match current_name with
-        | None -> assert false
-        | Some n -> n
-
-      method! sum vars =
-        match
-          List.filter_map vars ~f:(function
-            | Record [] -> None
-            | _ as t -> Some (self#typ t))
-        with
-        | [] -> assert false
-        | [ t ] -> t
-        | ts -> Sum ts
-
-      method! field x =
-        if x.name = "documentChanges" then
-          (* This gross hack is needed for the documentChanges field. We can
-             ignore the first constructor since it's completely representable
-             with the second one. *)
-          match x.data with
-          | Single
-              { typ = Sum [ List (Ident "TextDocumentEdit"); (List _ as typ) ]
-              ; optional
-              } ->
-            let data = Single { typ; optional } in
-            super#field { x with data }
-          | _ -> super#field x
-        else if x.name = "change" then
-          match x.data with
-          | Single { typ = Ident "number"; optional = true } ->
-            let typ = Ident "TextDocumentSyncKind" in
-            let data = Single { typ; optional = true } in
-            super#field { x with data }
-          | _ -> super#field x
-        else super#field x
-
-      method! typ x =
-        (* XXX what does this to? I don't see any sums of records in
-           TextDocumentContentChangeEvent *)
-        match x with
-        | Sum [ Record f1; Record f2 ]
-          when self#name = "TextDocumentContentChangeEvent" ->
-          let t =
-            Record
-              (union_fields f1 f2 ~f:(fun k t1 t2 ->
-                   assert (k = "text");
-                   assert (t1 = t2);
-                   Some t1))
-          in
-          super#typ t
-        | t -> super#typ t
-
-      (* all toplevel declarations that we decide to skip *)
-      method! t x =
-        current_name <- Some x.name;
-        super#t x
-
-      method! interface i =
-        let extends =
-          List.filter i.extends ~f:(fun name ->
-              not (List.mem removed_super_classes name ~equal:String.equal))
-        in
-        let fields =
-          (* We ignore this field until we switch to our own code gen. *)
-          if self#name = "FormattingOptions" then
-            List.filter i.fields ~f:(fun (f : field) ->
-                match f.data with
-                | Pattern _ when f.name = "key" -> false
-                | _ -> true)
-          else i.fields
-        in
-        super#interface { i with extends; fields }
-    end
-  in
-  fun i -> traverse#t i
+(* XXX this is temporary until we support the [supportsCustomValues] field *)
+let with_custom_values =
+  [ "FoldingRangeKind"; "CodeActionKind"; "PositionEncodingKind"; "WatchKind" ]
 
 module Expanded = struct
   (** The expanded form is still working with typescript types. However, all
@@ -139,7 +56,7 @@ module Expanded = struct
       | f -> Some (Record f)
     in
     match x with
-    | Record d -> record d
+    | List (Record d) | Record d -> record d
     | Sum [ _; Record d ] -> record d
     | _ -> None
 
@@ -157,7 +74,10 @@ module Expanded = struct
           | Single { optional = _; typ } -> (
             match new_binding_of_typ typ with
             | None -> init
-            | Some data -> { f with data } :: init)
+            | Some data ->
+              let new_record = { f with data } in
+              if List.mem ~equal:Poly.equal init new_record then init
+              else new_record :: init)
         in
         super#field f ~init
     end
@@ -307,9 +227,8 @@ end = struct
         let bindings =
           List.map t.impl.bindings ~f:(fun (x : _ Named.t) ->
               let data =
-                match x.data with
-                | Ml.Module.Type_decl decl ->
-                  Ml.Module.Type_decl (map#decl () decl |> fst)
+                match (x.data : Module.impl) with
+                | Type_decl decl -> Ml.Module.Type_decl (map#decl () decl |> fst)
                 | x -> x
               in
               { x with data })
@@ -324,88 +243,6 @@ end = struct
     | Impl -> Ml.Module.pp_impl t.impl
 
   let pp t = { Ml.Kind.intf = pp t ~kind:Intf; impl = pp t ~kind:Impl }
-end
-
-let pp_file pp ch =
-  let fmt = Format.formatter_of_out_channel ch in
-  Pp.to_fmt fmt pp;
-  Format.pp_print_flush fmt ()
-
-module Create : sig
-  (* Generate create functions with optional/labeled arguments *)
-  val intf_of_type : Ml.Type.decl Named.t -> Ml.Module.sig_ Named.t list
-
-  val impl_of_type : Ml.Type.decl Named.t -> Ml.Module.impl Named.t list
-end = struct
-  let f_name name = if name = "t" then "create" else sprintf "create_%s" name
-
-  let need_unit =
-    List.exists ~f:(fun (f : Ml.Type.field) ->
-        match f.typ with
-        | Ml.Type.Optional _ -> true
-        | _ -> false)
-
-  let intf { Named.name; data = fields } =
-    let type_ =
-      let need_unit = need_unit fields in
-      let fields : Ml.Type.t Ml.Arg.t list =
-        List.map fields ~f:(fun (field : Ml.Type.field) ->
-            match field.typ with
-            | Optional t -> Ml.Arg.Optional (field.name, t)
-            | t -> Labeled (field.name, t))
-      in
-      let args : Ml.Type.t Ml.Arg.t list =
-        if need_unit then
-          (* Gross hack because I was too lazy to allow patterns in toplevel
-             exprs *)
-          fields @ [ Ml.Arg.Unnamed Ml.Type.unit ]
-        else fields
-      in
-      Ml.Type.fun_ args (Ml.Type.name name)
-    in
-    let f_name = f_name name in
-    { Named.name = f_name; data = type_ }
-
-  let impl { Named.name; data = fields } =
-    let make =
-      let fields =
-        List.map fields ~f:(fun (field : Ml.Type.field) ->
-            let open Ml.Expr in
-            (field.name, Create (Ident field.name)))
-      in
-      Ml.Expr.Create (Record fields)
-    in
-    let pat =
-      let need_unit = need_unit fields in
-      let fields =
-        List.map fields ~f:(fun (field : Ml.Type.field) ->
-            match field.typ with
-            | Optional t -> (Ml.Arg.Optional (field.name, field.name), t)
-            | t -> (Ml.Arg.Labeled (field.name, field.name), t))
-      in
-      if need_unit then
-        (* Gross hack because I was too lazy to allow patterns in toplevel
-           exprs *)
-        fields @ [ (Unnamed "()", Ml.Type.unit) ]
-      else fields
-    in
-    let body = { Ml.Expr.pat; type_ = Ml.Type.name name; body = make } in
-    let f_name = f_name name in
-    { Named.name = f_name; data = body }
-
-  let impl_of_type (t : Ml.Type.decl Named.t) =
-    match (t.data : Ml.Type.decl) with
-    | Record fields ->
-      let create = impl { t with data = fields } in
-      [ { create with data = Ml.Module.Value create.data } ]
-    | _ -> []
-
-  let intf_of_type (t : Ml.Type.decl Named.t) : Ml.Module.sig_ Named.t list =
-    match (t.data : Ml.Type.decl) with
-    | Record fields ->
-      let create = intf { t with data = fields } in
-      [ { create with data = Ml.Module.Value create.data } ]
-    | _ -> []
 end
 
 let enum_module ~allow_other ({ Named.name; data = constrs } as t) =
@@ -522,14 +359,19 @@ end = struct
       | Ident Number -> Type.int
       | Ident String -> Type.string
       | Ident Bool -> Type.bool
-      | Ident Any | Ident Object -> Type.json
+      | Ident Object -> Type.json_object
       | Ident Self -> Type.t (* XXX wrong *)
+      | Ident Any -> Type.json
       | Ident Null -> assert false
       | Ident List -> Type.list Type.json
-      | Ident (Resolved r) -> (
-        match r.kind with
-        | Type_variable -> Type.unit
-        | Name -> Type.module_t (Entities.find db r).name)
+      | Ident (Resolved { id = _; name = "URI" }) -> Type.module_t "DocumentUri"
+      | Ident (Resolved { id = _; name = "LSPAny" }) -> Type.json
+      | Ident (Resolved { id = _; name = "LSPObject" }) -> Type.json_object
+      | Ident (Resolved r) ->
+        let entity = Entities.find db r in
+        Type.module_t entity.name
+      | List (Ident (Uinteger | Number)) when topmost_field_name = Some "data"
+        -> Type.array Type.int
       | List t -> Type.list (type_ topmost_field_name t)
       | Tuple ts -> Type.Tuple (List.map ~f:(type_ topmost_field_name) ts)
       | Sum s -> sum topmost_field_name s
@@ -553,6 +395,7 @@ end = struct
         let key = type_ topmost_field_name pat in
         let data = type_ topmost_field_name typ in
         Some (Type.assoc_list ~key ~data)
+      | [] -> Some Type.json_object
       | _ -> None
     and record fields =
       match simplify_record fields with
@@ -561,14 +404,14 @@ end = struct
     and poly topmost_field_name s : Ml.Type.t =
       let type_ = type_ topmost_field_name in
       try
-        Type.Poly_variant
+        Poly_variant
           (List.map s ~f:(fun t ->
                let name, constrs =
                  match (t : Resolved.typ) with
                  | Ident Self | Ident Null -> assert false
                  | Ident String -> ("String", [ type_ t ])
                  | Ident Number -> ("Int", [ type_ t ])
-                 | Ident Any | Ident Object -> ("Assoc", [ type_ t ])
+                 | Ident Object -> ("Assoc", [ type_ t ])
                  | Ident Bool -> ("Bool", [ type_ t ])
                  | List _ | Ident List -> ("List", [ type_ t ])
                  | Ident (Resolved r) -> ((Entities.find db r).name, [ type_ t ])
@@ -594,14 +437,14 @@ end = struct
       let data = make_typ db { Named.name = field.name; data = typ } in
       let typ = Type.assoc_list ~key ~data in
       Left (Ml.Type.field typ ~name:field.name)
-    | Resolved.Single { typ = Literal s; optional = false } ->
+    | Single { typ = Literal s; optional = false } ->
       let literal_value =
         match s with
         | String s -> s
         | _ -> assert false
       in
       Right { literal_value; field_name = field.name }
-    | Resolved.Single { typ; optional } ->
+    | Single { typ; optional } ->
       let typ = make_typ db { Named.name = field.name; data = typ } in
       let typ = if optional then Type.Optional typ else typ in
       Left (Ml.Type.field typ ~name:field.name)
@@ -613,6 +456,7 @@ end = struct
         let key = make_typ db { Named.name; data = pat } in
         let data = make_typ db { Named.name; data = typ } in
         (Type.Alias (Type.assoc_list ~key ~data), [])
+      | [] -> (Type.Alias Type.json_object, [])
       | _ ->
         let fields, literals = List.partition_map fields ~f:(make_field db) in
         (Type.Record fields, literals)
@@ -661,12 +505,9 @@ end = struct
     in
     [ main_type ]
 
-  let record db ({ Named.name = _; data = fields } as t) =
+  let record db ({ Named.name = _; data = _ } as t) =
     let main_type, literals = Mapper.record_ db t in
-    (* why do we need this check at all? *)
-    match fields with
-    | [] -> None
-    | _ :: _ -> Some (main_type, literals)
+    Some (main_type, literals)
 
   let poly_enum { Named.name; data = _ } : Type.decl Named.t list =
     [ { Named.name; data = Type.Alias Type.unit } ]
@@ -700,8 +541,8 @@ end = struct
     in
     let intf : Ml.Module.sig_ Named.t list =
       List.map type_decls ~f:(function
-        | `Record (t, _) -> t
-        | `Type t -> t)
+          | `Record (t, _) -> t
+          | `Type t -> t)
       |> List.concat_map ~f:(fun (td : Ml.Type.decl Named.t) ->
              let td =
                { td with data = Module.rename_invalid_fields Intf td.data }
@@ -710,7 +551,7 @@ end = struct
                  Named.data = (Ml.Module.Type_decl td.data : Ml.Module.sig_)
                }
              ]
-             @ Create.intf_of_type td)
+             @ Ml_create.intf_of_type td)
     in
     let impl : Ml.Module.impl Named.t list =
       (* TODO we should make sure to handle duplicate variants extracted *)
@@ -743,7 +584,9 @@ end = struct
             match literal_wrapper with
             | None -> []
             | Some { field_name; literal_value } ->
-              Json_gen.make_literal_wrapper_conv ~field_name ~literal_value
+              Json_gen.make_literal_wrapper_conv
+                ~field_name
+                ~literal_value
                 ~type_name:typ_.name
           in
           let typ_ =
@@ -758,40 +601,13 @@ end = struct
           in
           poly_vars_and_convs
           @ [ { typ_ with data = Ml.Module.Type_decl typ_.data } ]
-          @ json_convs_for_t @ Create.impl_of_type typ_ @ literal_wrapper)
+          @ json_convs_for_t
+          @ Ml_create.impl_of_type typ_
+          @ literal_wrapper)
     in
     let module_ bindings = { Ml.Module.name; bindings } in
     { Ml.Kind.intf = module_ intf; impl = module_ impl }
 end
-
-let expand_super_classes db ts =
-  let interface_fields (i : Resolved.interface) =
-    let rec interface init (i : Resolved.interface) =
-      let init =
-        List.fold_left i.extends ~init ~f:(fun init a ->
-            match a with
-            | Prim.Resolved r -> type_ init (Entities.find db r).data
-            | _ -> assert false)
-      in
-      init @ i.fields
-    and type_ init (i : Resolved.decl) : Resolved.field list =
-      match i with
-      | Enum_anon _ -> assert false
-      | Type (Record fields) -> List.rev_append fields init
-      | Type _ -> assert false
-      | Interface i -> interface init i
-    in
-    interface [] i
-  in
-  List.map ts ~f:(fun (r : Resolved.t) ->
-      let data =
-        match r.data with
-        | Interface i ->
-          let fields = interface_fields i in
-          Resolved.Interface { i with fields; extends = [] }
-        | r -> r
-      in
-      { r with data })
 
 (* extract all resovled identifiers *)
 class name_idents =
@@ -800,20 +616,17 @@ class name_idents =
 
     method! ident i ~init =
       match i with
-      | Resolved r -> (
-        match r.kind with
-        | Name -> r :: init
-        | Type_variable -> init)
+      | Resolved r -> r :: init
       | _ -> init
   end
 
-let resolve_and_pp_typescript (ts : Unresolved.t list) =
-  let ts = List.map ts ~f:preprocess in
+let resolve_typescript (ts : Unresolved.t list) =
   let ts, db = Typescript.resolve_all ts in
   let db = Entities.of_map db ts in
   match
     let idents = new name_idents in
-    Ident.Top_closure.top_closure ts
+    Ident.Top_closure.top_closure
+      ts
       ~key:(fun x -> Entities.rev_find db x)
       ~deps:(fun x -> idents#t x ~init:[] |> List.map ~f:(Entities.find db))
   with
@@ -823,7 +636,6 @@ let resolve_and_pp_typescript (ts : Unresolved.t list) =
   | Ok ts -> (db, ts)
 
 let of_resolved_typescript db (ts : Resolved.t list) =
-  let ts = expand_super_classes db ts in
   let simple_enums, everything_else =
     List.filter_partition_map ts ~f:(fun (t : Resolved.t) ->
         if List.mem skipped_ts_decls t.name ~equal:String.equal then Skip
@@ -835,7 +647,9 @@ let of_resolved_typescript db (ts : Resolved.t list) =
   let simple_enums =
     List.map simple_enums ~f:(fun (t : _ Named.t) ->
         (* "open" enums need an `Other constructor *)
-        let allow_other = t.name = "CodeActionKind" in
+        let allow_other =
+          List.mem ~equal:String.equal with_custom_values t.name
+        in
         let data =
           List.filter_map t.data ~f:(fun (constr, v) ->
               match (v : Ts_types.Enum.case) with
@@ -860,18 +674,5 @@ let of_resolved_typescript db (ts : Resolved.t list) =
          Module.use_json_conv_types decl)
 
 let of_typescript ts =
-  let db, ts = resolve_and_pp_typescript ts in
+  let db, ts = resolve_typescript ts in
   of_resolved_typescript db ts
-
-let output modules ~kind out =
-  let open Ml.Kind in
-  let intf, impl =
-    List.map modules ~f:(fun m ->
-        let { intf; impl } = Module.pp m in
-        (intf, impl))
-    |> List.unzip
-  in
-  let def = { intf; impl } in
-  let def = Ml.Kind.Map.map def ~f:(Pp.concat ~sep:Pp.newline) in
-  let pp = Ml.Kind.Map.get def kind in
-  pp_file pp out

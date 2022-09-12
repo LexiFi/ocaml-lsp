@@ -1,38 +1,39 @@
 import outdent from "outdent";
 import * as path from "path";
+import { URI } from "vscode-uri";
 import * as LanguageServer from "../src/LanguageServer";
-
+import * as Protocol from "vscode-languageserver-protocol";
 import * as Types from "vscode-languageserver-types";
 import { Position } from "vscode-languageserver-types";
 
-function findAnnotateAction(actions) {
+function findAnnotateAction(actions: Types.CodeAction[]) {
   return actions.find((action) => action.kind == "type-annotate");
 }
 
-function findAddRecAnnotation(actions) {
+function findAddRecAnnotation(actions: Types.CodeAction[]) {
   return actions.find(
     (action) =>
       action.kind == "quickfix" && action.title == "Add missing `rec` keyword",
   );
 }
 
-function findMarkUnused(actions) {
+function findMarkUnused(actions: Types.CodeAction[]) {
   return actions.find(
     (action) => action.kind == "quickfix" && action.title == "Mark as unused",
   );
 }
 
-function findRemoveUnused(actions) {
+function findRemoveUnused(actions: Types.CodeAction[]) {
   return actions.find(
     (action) => action.kind == "quickfix" && action.title == "Remove unused",
   );
 }
 
-function findInferredAction(actions) {
+function findInferredAction(actions: Types.CodeAction[]) {
   return actions.find((action) => action.kind == "inferred_intf");
 }
 
-function mkUnboundDiagnostic(start, end) {
+function mkUnboundDiagnostic(start: Types.Position, end: Types.Position) {
   return {
     message: "Unbound value",
     range: { end, start },
@@ -41,7 +42,7 @@ function mkUnboundDiagnostic(start, end) {
   };
 }
 
-function mkUnusedDiagnostic(start, end) {
+function mkUnusedDiagnostic(start: Types.Position, end: Types.Position) {
   return {
     message: "Error (warning 26): unused variable",
     range: { end, start },
@@ -51,23 +52,30 @@ function mkUnusedDiagnostic(start, end) {
 }
 
 describe("textDocument/codeAction", () => {
-  let languageServer = null;
+  let languageServer: LanguageServer.LanguageServer;
 
-  async function openDocument(source, uri) {
-    await languageServer.sendNotification("textDocument/didOpen", {
-      textDocument: Types.TextDocumentItem.create(uri, "ocaml", 0, source),
-    });
+  function openDocument(source: string, uri: string) {
+    languageServer.sendNotification(
+      Protocol.DidOpenTextDocumentNotification.type,
+      {
+        textDocument: Types.TextDocumentItem.create(uri, "ocaml", 0, source),
+      },
+    );
   }
 
   beforeEach(async () => {
     languageServer = await LanguageServer.startAndInitialize({
-      capabilities: { experimental: { jumpToNextHole: true } },
+      capabilities: {
+        experimental: { jumpToNextHole: true },
+        window: {
+          showDocument: { support: true },
+        },
+      },
     });
   });
 
   afterEach(async () => {
     await LanguageServer.exit(languageServer);
-    languageServer = null;
   });
 
   async function codeAction(
@@ -87,7 +95,7 @@ describe("textDocument/codeAction", () => {
   }
 
   it("can destruct sum types", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 type t = Foo of int | Bar of bool
 
@@ -179,12 +187,31 @@ let f (x : t) = x
           "kind": "type-annotate",
           "title": "Type-annotate",
         },
+        Object {
+          "command": Object {
+            "arguments": Array [
+              "file:///test.mli",
+            ],
+            "command": "ocamllsp/open-related-source",
+            "title": "Create test.mli",
+          },
+          "edit": Object {
+            "documentChanges": Array [
+              Object {
+                "kind": "create",
+                "uri": "file:///test.mli",
+              },
+            ],
+          },
+          "kind": "switch",
+          "title": "Create test.mli",
+        },
       ]
     `);
   });
 
   it("can infer module interfaces", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 type t = Foo of int | Bar of bool
 
@@ -192,10 +219,10 @@ let f (x : t) = x
 `,
       "file:///test.ml",
     );
-    await openDocument("", "file:///test.mli");
+    openDocument("", "file:///test.mli");
     let start = Types.Position.create(0, 0);
     let end = Types.Position.create(0, 0);
-    let actions = await codeAction("file:///test.mli", start, end);
+    let actions = (await codeAction("file:///test.mli", start, end)) ?? [];
     expect(findInferredAction(actions)).toMatchInlineSnapshot(`
       Object {
         "edit": Object {
@@ -235,13 +262,16 @@ let f (x : t) = x
   it("opens the implementation if not in store", async () => {
     let testWorkspacePath = path.join(__dirname, "declaration_files/");
     let intfFilepath = path.join(testWorkspacePath, "lib.mli");
-    let intfUri = "file://" + intfFilepath;
-    await openDocument("", intfUri);
+    let intfUri = URI.file(intfFilepath).toString();
+    openDocument("", intfUri);
     let start = Types.Position.create(0, 0);
     let end = Types.Position.create(0, 0);
-    let actions = await codeAction(intfUri, start, end);
-    expect(findInferredAction(actions).edit.documentChanges.map((a) => a.edits))
-      .toMatchInlineSnapshot(`
+    let actions = (await codeAction(intfUri, start, end)) ?? [];
+    expect(
+      findInferredAction(actions)?.edit?.documentChanges?.map((a) =>
+        Types.TextDocumentEdit.is(a) ? a.edits : null,
+      ),
+    ).toMatchInlineSnapshot(`
       Array [
         Array [
           Object {
@@ -264,7 +294,7 @@ let f (x : t) = x
   });
 
   it("can type-annotate a function argument", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 type t = Foo of int | Bar of bool
 
@@ -274,7 +304,7 @@ let f x = Foo x
     );
     let start = Types.Position.create(2, 6);
     let end = Types.Position.create(2, 7);
-    let actions = await codeAction("file:///test.ml", start, end);
+    let actions = (await codeAction("file:///test.ml", start, end)) ?? [];
     expect(findAnnotateAction(actions)).toMatchInlineSnapshot(`
       Object {
         "edit": Object {
@@ -310,7 +340,7 @@ let f x = Foo x
   });
 
   it("can type-annotate a toplevel value", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 let iiii = 3 + 4
 `,
@@ -318,7 +348,7 @@ let iiii = 3 + 4
     );
     let start = Types.Position.create(0, 4);
     let end = Types.Position.create(0, 5);
-    let actions = await codeAction("file:///test.ml", start, end);
+    let actions = (await codeAction("file:///test.ml", start, end)) ?? [];
     expect(findAnnotateAction(actions)).toMatchInlineSnapshot(`
       Object {
         "edit": Object {
@@ -354,7 +384,7 @@ let iiii = 3 + 4
   });
 
   it("can type-annotate an argument in a function call", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 let f x = x + 1
 let () =
@@ -365,7 +395,7 @@ let () =
     );
     let start = Types.Position.create(3, 15);
     let end = Types.Position.create(3, 16);
-    let actions = await codeAction("file:///test.ml", start, end);
+    let actions = (await codeAction("file:///test.ml", start, end)) ?? [];
     expect(findAnnotateAction(actions)).toMatchInlineSnapshot(`
       Object {
         "edit": Object {
@@ -401,7 +431,7 @@ let () =
   });
 
   it("can type-annotate a variant with its name only", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 type t = Foo of int | Bar of bool
 
@@ -411,7 +441,7 @@ let f (x : t) = x
     );
     let start = Types.Position.create(2, 16);
     let end = Types.Position.create(2, 17);
-    let actions = await codeAction("file:///test.ml", start, end);
+    let actions = (await codeAction("file:///test.ml", start, end)) ?? [];
     expect(findAnnotateAction(actions)).toMatchInlineSnapshot(`
       Object {
         "edit": Object {
@@ -447,7 +477,7 @@ let f (x : t) = x
   });
 
   it("does not type-annotate in a non expression context", async () => {
-    await openDocument(
+    openDocument(
       outdent`
 type x =
    | Foo of int
@@ -458,25 +488,105 @@ type x =
     let start = Types.Position.create(2, 5);
     let end = Types.Position.create(2, 6);
     let actions = await codeAction("file:///test.ml", start, end);
-    expect(actions).toBeNull();
+    expect(actions).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "command": Object {
+            "arguments": Array [
+              "file:///test.mli",
+            ],
+            "command": "ocamllsp/open-related-source",
+            "title": "Create test.mli",
+          },
+          "edit": Object {
+            "documentChanges": Array [
+              Object {
+                "kind": "create",
+                "uri": "file:///test.mli",
+              },
+            ],
+          },
+          "kind": "switch",
+          "title": "Create test.mli",
+        },
+      ]
+    `);
   });
 
   it("offers `Construct an expression` code action", async () => {
     let uri = "file:///test.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let x = _
 `,
       uri,
     );
 
-    let actions = await codeAction(
-      uri,
-      Position.create(0, 8),
-      Position.create(0, 9),
-    );
+    let actions =
+      (await codeAction(uri, Position.create(0, 8), Position.create(0, 9))) ??
+      [];
 
-    expect(actions).not.toBeNull();
+    expect(actions).toMatchInlineSnapshot(`
+      Array [
+        Object {
+          "edit": Object {
+            "documentChanges": Array [
+              Object {
+                "edits": Array [
+                  Object {
+                    "newText": "(_ : 'a)",
+                    "range": Object {
+                      "end": Object {
+                        "character": 9,
+                        "line": 0,
+                      },
+                      "start": Object {
+                        "character": 8,
+                        "line": 0,
+                      },
+                    },
+                  },
+                ],
+                "textDocument": Object {
+                  "uri": "file:///test.ml",
+                  "version": 0,
+                },
+              },
+            ],
+          },
+          "isPreferred": false,
+          "kind": "type-annotate",
+          "title": "Type-annotate",
+        },
+        Object {
+          "command": Object {
+            "command": "editor.action.triggerSuggest",
+            "title": "Trigger Suggest",
+          },
+          "kind": "construct",
+          "title": "Construct an expression",
+        },
+        Object {
+          "command": Object {
+            "arguments": Array [
+              "file:///test.mli",
+            ],
+            "command": "ocamllsp/open-related-source",
+            "title": "Create test.mli",
+          },
+          "edit": Object {
+            "documentChanges": Array [
+              Object {
+                "kind": "create",
+                "uri": "file:///test.mli",
+              },
+            ],
+          },
+          "kind": "switch",
+          "title": "Create test.mli",
+        },
+      ]
+    `);
 
     let construct_actions = actions.find(
       (codeAction: Types.CodeAction) =>
@@ -516,13 +626,10 @@ let x = _
   }: refactorOpenTestSpec) {
     documentUri = documentUri ? documentUri : "file:///test.ml";
 
-    await openDocument(documentText, documentUri);
+    openDocument(documentText, documentUri);
 
-    let codeActions: Types.CodeAction[] = await codeAction(
-      documentUri,
-      queryStartPos,
-      queryEndPos,
-    );
+    let codeActions =
+      (await codeAction(documentUri, queryStartPos, queryEndPos)) ?? [];
 
     let specificCodeActions = codeActions.filter(
       (codeAction: Types.CodeAction) => codeAction.title === codeActionTitle,
@@ -653,7 +760,7 @@ let x = _
 
   it("add missing rec in toplevel let", async () => {
     let uri = "file:///missing-rec-1.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let needs_rec x = 1 + (needs_rec x)
 `,
@@ -670,7 +777,7 @@ let needs_rec x = 1 + (needs_rec x)
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findAddRecAnnotation(actions)).toMatchInlineSnapshot(`
       Object {
         "diagnostics": Array [
@@ -724,7 +831,7 @@ let needs_rec x = 1 + (needs_rec x)
 
   it("add missing rec in expression let", async () => {
     let uri = "file:///missing-rec-2.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let outer =
   let inner x =
@@ -743,7 +850,7 @@ let outer =
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findAddRecAnnotation(actions)).toMatchInlineSnapshot(`
       Object {
         "diagnostics": Array [
@@ -797,7 +904,7 @@ let outer =
 
   it("add missing rec in expression let-and", async () => {
     let uri = "file:///missing-rec-3.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let outer =
   let inner1 = 0
@@ -817,7 +924,7 @@ let outer =
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findAddRecAnnotation(actions)).toMatchInlineSnapshot(`
       Object {
         "diagnostics": Array [
@@ -871,7 +978,7 @@ let outer =
 
   it("don't add rec when rec exists", async () => {
     let uri = "file:///has-rec-2.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let outer =
   let rec inner x =
@@ -882,13 +989,13 @@ let outer =
     let start = Types.Position.create(2, 14);
     let end = Types.Position.create(2, 15);
 
-    let actions = await codeAction(uri, start, end);
+    let actions = (await codeAction(uri, start, end)) ?? [];
     expect(findAddRecAnnotation(actions)).toBeUndefined();
   });
 
   it("don't add rec to pattern bindings", async () => {
     let uri = "file:///no-rec-1.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let (f, x) = 1 + (f x)
 `,
@@ -905,13 +1012,13 @@ let (f, x) = 1 + (f x)
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findAddRecAnnotation(actions)).toBeUndefined();
   });
 
   it("mark variable as unused", async () => {
     let uri = "file:///mark-unused-variable.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let f x =
   let y = [
@@ -933,7 +1040,7 @@ let f x =
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findMarkUnused(actions)).toMatchInlineSnapshot(`
       Object {
         "diagnostics": Array [
@@ -978,7 +1085,7 @@ let f x =
             },
           ],
         },
-        "isPreferred": false,
+        "isPreferred": true,
         "kind": "quickfix",
         "title": "Mark as unused",
       }
@@ -987,7 +1094,7 @@ let f x =
 
   it("remove unused variable", async () => {
     let uri = "file:///remove-unused-variable.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let f x =
   let y = [
@@ -1009,7 +1116,7 @@ let f x =
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findRemoveUnused(actions)).toMatchInlineSnapshot(`
       Object {
         "diagnostics": Array [
@@ -1063,7 +1170,7 @@ let f x =
 
   it("don't remove unused value in let-and binding", async () => {
     let uri = "file:///remove-unused-variable-2.ml";
-    await openDocument(
+    openDocument(
       outdent`
 let f x =
   let y = 0 and z = 0 in
@@ -1082,7 +1189,7 @@ let f x =
       ],
     };
 
-    let actions = await codeAction(uri, start, end, context);
+    let actions = (await codeAction(uri, start, end, context)) ?? [];
     expect(findRemoveUnused(actions)).toBeUndefined();
   });
 });

@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "Jsonrpc protocol implemenation"
 description: "See https://www.jsonrpc.org/specification"
-maintainer: ["Rudi Grinberg <me@rgrinerg.com>"]
+maintainer: ["Rudi Grinberg <me@rgrinberg.com>"]
 authors: [
   "Andrey Popp <8mayday@gmail.com>"
   "Rusty Key <iam@stfoo.ru>"
@@ -19,7 +19,7 @@ license: "ISC"
 homepage: "https://github.com/ocaml/ocaml-lsp"
 bug-reports: "https://github.com/ocaml/ocaml-lsp/issues"
 depends: [
-  "dune" {>= "2.9"}
+  "dune" {>= "3.0"}
   "ocaml" {>= "4.08"}
   "odoc" {with-doc}
 ]

@@ -18,6 +18,8 @@ module String = struct
 
   let index = index_opt
 
+  let is_empty s = length s = 0
+
   let rec check_prefix s ~prefix len i =
     i = len || (s.[i] = prefix.[i] && check_prefix s ~prefix len (i + 1))
 
@@ -31,6 +33,9 @@ module String = struct
     let len = length s in
     let prefix_len = length prefix in
     len >= prefix_len && check_prefix s ~prefix prefix_len 0
+
+  let add_prefix_if_not_exists s ~prefix =
+    if is_prefix s ~prefix then s else prefix ^ s
 
   let next_occurrence ~pattern text from =
     let plen = String.length pattern in
@@ -91,44 +96,6 @@ module Json = struct
     | Some f -> f
     | None -> error ("missing field: " ^ name) (`Assoc fields)
 
-  let rec of_dyn (t : Dyn.t) : t =
-    match t with
-    | Opaque -> `String "<opaque>"
-    | Unit -> `String "()"
-    | Int i -> `Int i
-    | Int32 i -> `Int (Int32.to_int i)
-    | Nativeint i -> `Int (Nativeint.to_int i)
-    | Int64 i -> `Int (Int64.to_int i)
-    | Bool b -> `Bool b
-    | String s -> `String s
-    | Bytes s -> `String (Bytes.to_string s)
-    | Char c -> `String (String.make 1 c)
-    | Float f -> `Float f
-    | Option None -> `String "<none>"
-    | Option (Some s) -> of_dyn s
-    | List xs -> `List (List.map ~f:of_dyn xs)
-    | Array xs -> `List (List.map ~f:of_dyn (Array.to_list xs))
-    | Tuple xs -> `List (List.map ~f:of_dyn xs)
-    | Record r -> `Assoc (List.map r ~f:(fun (k, v) -> (k, of_dyn v)))
-    | Variant (name, args) -> `Assoc [ (name, of_dyn (List args)) ]
-    | Set xs -> `List (List.map ~f:of_dyn xs)
-    | Map map ->
-      `List (List.map map ~f:(fun (k, v) -> `List [ of_dyn k; of_dyn v ]))
-
-  let rec to_dyn (t : t) : Dyn.t =
-    match t with
-    | `String s -> String s
-    | `Int i -> Int i
-    | `Float f -> Float f
-    | `Bool f -> Bool f
-    | `Assoc o -> Record (List.map o ~f:(fun (k, v) -> (k, to_dyn v)))
-    | `List l -> List (List.map l ~f:to_dyn)
-    | `Tuple args -> Tuple (List.map args ~f:to_dyn)
-    | `Null -> Dyn.Variant ("Null", [])
-    | `Variant (name, Some arg) -> Variant (name, [ to_dyn arg ])
-    | `Variant (name, None) -> Variant (name, [])
-    | `Intlit s -> String s
-
   module Conv = struct
     include Ppx_yojson_conv_lib.Yojson_conv
   end
@@ -139,6 +106,19 @@ module Json = struct
       | s -> s
       | (exception Jsonrpc.Json.Of_json (_, _))
       | (exception Conv.Of_yojson_error (_, _)) -> c2 json
+  end
+
+  module Object = struct
+    type json = t
+
+    type nonrec t = (string * t) list
+
+    let yojson_of_t t : json = `Assoc t
+
+    let t_of_yojson (t : json) : t =
+      match t with
+      | `Assoc t -> t
+      | json -> error "object expected" json
   end
 
   module Option = struct
@@ -244,7 +224,7 @@ module Json = struct
   end
 
   let read_json_params f v =
-    match f (Jsonrpc.Message.Structured.to_json v) with
+    match f (Jsonrpc.Structured.yojson_of_t v) with
     | r -> Ok r
     | exception Ppx_yojson_conv_lib.Yojson_conv.Of_yojson_error (Failure msg, _)
       -> Error msg
@@ -254,8 +234,8 @@ module Json = struct
     | None -> Error "params are required"
     | Some params -> Ok params
 
-  let message_params (t : _ Jsonrpc.Message.t) f =
-    match require_params t.params with
+  let message_params params f =
+    match require_params params with
     | Error e -> Error e
     | Ok x -> read_json_params f x
 end

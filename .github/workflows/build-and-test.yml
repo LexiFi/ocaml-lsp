@@ -30,12 +30,12 @@ jobs:
           git config --global core.eol lf
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: true
 
       - name: Use latest LTS Node.js release
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
 
@@ -54,10 +54,6 @@ jobs:
       # the makefile explains why we don't use test dependencies
       - name: Install test dependencies
         run: opam exec -- make install-test-deps
-
-      - name: Check formatting
-        run: opam exec -- make fmt
-        if: ${{ matrix.os == 'ubuntu-latest' && always() }}
 
       - name: Run build
         run: opam exec -- make all

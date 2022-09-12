@@ -13,27 +13,27 @@ module Reply : sig
 end
 
 (** Raised when the server is shutdown and a pending request will not complete. *)
-exception Stopped of Jsonrpc.Message.request
+exception Stopped of Jsonrpc.Request.t
 
 (** IO free implementation of the jsonrpc protocol. We stay completely agnostic
     of transport by only dealing with abstract jsonrpc packets *)
 module Make (Chan : sig
   type t
 
-  val send : t -> Jsonrpc.packet list -> unit Fiber.t
+  val send : t -> Jsonrpc.Packet.t list -> unit Fiber.t
 
-  val recv : t -> Jsonrpc.packet option Fiber.t
+  val recv : t -> Jsonrpc.Packet.t option Fiber.t
 
   val close : t -> [ `Read | `Write ] -> unit Fiber.t
 end) : sig
   type 'state t
 
   module Context : sig
-    type ('state, 'req) t
+    type ('state, 'message) t
 
     type 'a session
 
-    val message : (_, 'req) t -> 'req Jsonrpc.Message.t
+    val message : (_, 'message) t -> 'message
 
     val state : ('a, _) t -> 'a
 
@@ -43,9 +43,10 @@ end) : sig
 
   val create :
        ?on_request:
-         (('state, Jsonrpc.Id.t) Context.t -> (Reply.t * 'state) Fiber.t)
+         (('state, Jsonrpc.Request.t) Context.t -> (Reply.t * 'state) Fiber.t)
     -> ?on_notification:
-         (('state, unit) Context.t -> (Notify.t * 'state) Fiber.t)
+         (   ('state, Jsonrpc.Notification.t) Context.t
+          -> (Notify.t * 'state) Fiber.t)
     -> name:string
     -> Chan.t
     -> 'state
@@ -59,22 +60,31 @@ end) : sig
 
   val run : _ t -> unit Fiber.t
 
-  val notification : _ t -> Jsonrpc.Message.notification -> unit Fiber.t
+  val notification : _ t -> Jsonrpc.Notification.t -> unit Fiber.t
 
-  val request : _ t -> Jsonrpc.Message.request -> Jsonrpc.Response.t Fiber.t
+  val request : _ t -> Jsonrpc.Request.t -> Jsonrpc.Response.t Fiber.t
+
+  type cancel
+
+  val fire : cancel -> unit Fiber.t
+
+  val request_with_cancel :
+       _ t
+    -> Jsonrpc.Request.t
+    -> cancel * [ `Ok of Jsonrpc.Response.t | `Cancelled ] Fiber.t
 
   module Batch : sig
     type t
 
     val create : unit -> t
 
-    val notification : t -> Jsonrpc.Message.notification -> unit
+    val notification : t -> Jsonrpc.Notification.t -> unit
 
     type response
 
     val await : response -> Jsonrpc.Response.t Fiber.t
 
-    val request : t -> Jsonrpc.Message.request -> response
+    val request : t -> Jsonrpc.Request.t -> response
   end
 
   val submit : _ t -> Batch.t -> unit Fiber.t

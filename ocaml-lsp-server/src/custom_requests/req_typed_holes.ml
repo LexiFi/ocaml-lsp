@@ -18,11 +18,14 @@ module Request_params = struct
       Some uri
     | _ -> None
 
-  let parse_exn (params : Jsonrpc.Message.Structured.t option) : t =
+  let parse_exn (params : Jsonrpc.Structured.t option) : t =
     let raise_invalid_params ?data ~message () =
       Jsonrpc.Response.Error.raise
-      @@ Jsonrpc.Response.Error.make ?data
-           ~code:Jsonrpc.Response.Error.Code.InvalidParams ~message ()
+      @@ Jsonrpc.Response.Error.make
+           ?data
+           ~code:Jsonrpc.Response.Error.Code.InvalidParams
+           ~message
+           ()
     in
     match params with
     | None ->
@@ -37,12 +40,13 @@ module Request_params = struct
             ; ("params_received", (params :> Json.t))
             ]
         in
-        raise_invalid_params ~message:"Unxpected parameter format"
-          ~data:error_json ())
+        raise_invalid_params
+          ~message:"Unxpected parameter format"
+          ~data:error_json
+          ())
 end
 
-let on_request ~(params : Jsonrpc.Message.Structured.t option) (state : State.t)
-    =
+let on_request ~(params : Jsonrpc.Structured.t option) (state : State.t) =
   Fiber.of_thunk (fun () ->
       let uri = Request_params.parse_exn params in
       let store = state.store in
@@ -53,7 +57,8 @@ let on_request ~(params : Jsonrpc.Message.Structured.t option) (state : State.t)
         @@ Jsonrpc.Response.Error.make
              ~code:Jsonrpc.Response.Error.Code.InvalidParams
              ~message:
-               (Printf.sprintf "Document %s wasn't found in the document store"
+               (Printf.sprintf
+                  "Document %s wasn't found in the document store"
                   (Uri.to_string uri))
              ()
       | Some doc ->

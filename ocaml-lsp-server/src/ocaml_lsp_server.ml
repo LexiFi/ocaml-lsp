@@ -9,7 +9,25 @@ let not_supported () =
   Jsonrpc.Response.Error.raise
     (make_error ~code:InternalError ~message:"Request not supported yet!" ())
 
-let initialize_info : InitializeResult.t =
+let view_metrics_command_name = "ocamllsp/view-metrics"
+
+let view_metrics server =
+  let* json = Metrics.dump () in
+  let uri, chan =
+    Filename.open_temp_file (sprintf "lsp-metrics.%d" (Unix.getpid ())) ".json"
+  in
+  output_string chan json;
+  close_out_noerr chan;
+  let req =
+    let uri = Uri.of_path uri in
+    Server_request.ShowDocumentRequest
+      (ShowDocumentParams.create ~uri ~takeFocus:true ())
+  in
+  let+ { ShowDocumentResult.success = _ } = Server.request server req in
+  `Null
+
+let initialize_info (client_capabilities : ClientCapabilities.t) :
+    InitializeResult.t =
   let codeActionProvider =
     let codeActionKinds =
       Action_inferred_intf.kind :: Action_destruct.kind
@@ -27,16 +45,20 @@ let initialize_info : InitializeResult.t =
   in
   let textDocumentSync =
     `TextDocumentSyncOptions
-      (TextDocumentSyncOptions.create ~openClose:true
-         ~change:TextDocumentSyncKind.Incremental ~willSave:false
-         ~save:(`Bool true) ~willSaveWaitUntil:false ())
+      (TextDocumentSyncOptions.create
+         ~openClose:true
+         ~change:TextDocumentSyncKind.Incremental
+         ~willSave:false
+         ~save:(`Bool true)
+         ~willSaveWaitUntil:false
+         ())
   in
   let codeLensProvider = CodeLensOptions.create ~resolveProvider:false () in
   let completionProvider =
-    (* TODO even if this re-enabled in general, it should stay disabled for
-       emacs. It makes completion too slow *)
-    CompletionOptions.create ~triggerCharacters:[ "."; "#" ]
-      ~resolveProvider:true ()
+    CompletionOptions.create
+      ~triggerCharacters:[ "."; "#" ]
+      ~resolveProvider:true
+      ()
   in
   let signatureHelpProvider =
     SignatureHelpOptions.create
@@ -48,8 +70,10 @@ let initialize_info : InitializeResult.t =
   in
   let workspace =
     let workspaceFolders =
-      WorkspaceFoldersServerCapabilities.create ~supported:true
-        ~changeNotifications:(`Bool true) ()
+      WorkspaceFoldersServerCapabilities.create
+        ~supported:true
+        ~changeNotifications:(`Bool true)
+        ()
     in
     ServerCapabilities.create_workspace ~workspaceFolders ()
   in
@@ -68,17 +92,52 @@ let initialize_info : InitializeResult.t =
         ]
     in
     let executeCommandProvider =
-      ExecuteCommandOptions.create ~commands:Dune.commands ()
+      let commands =
+        if
+          Action_open_related.available
+            (let open Option.O in
+            let* window = client_capabilities.window in
+            window.showDocument)
+        then
+          view_metrics_command_name :: Action_open_related.command_name
+          :: Dune.commands
+        else Dune.commands
+      in
+      ExecuteCommandOptions.create ~commands ()
     in
-    ServerCapabilities.create ~textDocumentSync ~hoverProvider:(`Bool true)
-      ~declarationProvider:(`Bool true) ~definitionProvider:(`Bool true)
-      ~typeDefinitionProvider:(`Bool true) ~completionProvider
-      ~signatureHelpProvider ~codeActionProvider ~codeLensProvider
-      ~referencesProvider:(`Bool true) ~documentHighlightProvider:(`Bool true)
+    let semanticTokensProvider =
+      Option.map (Sys.getenv_opt "OCAMLLSP_SEMANTIC_HIGHLIGHTING") ~f:(fun v ->
+          let delta = String.equal v "full/delta" in
+          let full = `Full (SemanticTokensOptions.create_full ~delta ()) in
+          `SemanticTokensOptions
+            (SemanticTokensOptions.create
+               ~legend:Semantic_highlighting.legend
+               ~full
+               ()))
+    in
+    ServerCapabilities.create
+      ~textDocumentSync
+      ~hoverProvider:(`Bool true)
+      ~declarationProvider:(`Bool true)
+      ~definitionProvider:(`Bool true)
+      ~typeDefinitionProvider:(`Bool true)
+      ~completionProvider
+      ~signatureHelpProvider
+      ~codeActionProvider
+      ~codeLensProvider
+      ~referencesProvider:(`Bool true)
+      ~documentHighlightProvider:(`Bool true)
       ~documentFormattingProvider:(`Bool true)
-      ~selectionRangeProvider:(`Bool true) ~documentSymbolProvider:(`Bool true)
-      ~workspaceSymbolProvider:(`Bool true) ~foldingRangeProvider:(`Bool false)
-      ~experimental ~renameProvider ~workspace ~executeCommandProvider ()
+      ~selectionRangeProvider:(`Bool true)
+      ~documentSymbolProvider:(`Bool true)
+      ~workspaceSymbolProvider:(`Bool true)
+      ~foldingRangeProvider:(`Bool true)
+      ?semanticTokensProvider
+      ~experimental
+      ~renameProvider
+      ~workspace
+      ~executeCommandProvider
+      ()
   in
   let serverInfo =
     let version = Version.get () in
@@ -88,77 +147,11 @@ let initialize_info : InitializeResult.t =
 
 let ocamlmerlin_reason = "ocamlmerlin-reason"
 
-let extract_related_errors uri raw_message =
-  match Ocamlc_loc.parse_raw raw_message with
-  | `Message message :: related ->
-    let string_of_message message =
-      String.trim
-        (match (message : Ocamlc_loc.message) with
-        | Raw s -> s
-        | Structured { message; severity; file_excerpt = _ } ->
-          let severity =
-            match severity with
-            | Error -> "Error"
-            | Warning { code; name } ->
-              sprintf "Warning %s"
-                (match (code, name) with
-                | None, Some name -> sprintf "[%s]" name
-                | Some code, None -> sprintf "%d" code
-                | Some code, Some name -> sprintf "%d [%s]" code name
-                | None, None -> assert false)
-          in
-          sprintf "%s: %s" severity message)
-    in
-    let related =
-      let rec loop acc = function
-        | `Loc (_, loc) :: `Message m :: xs -> loop ((loc, m) :: acc) xs
-        | [] -> List.rev acc
-        | _ ->
-          (* give up when we see something unexpected *)
-          Log.log ~section:"debug" (fun () ->
-              Log.msg "unable to parse error" [ ("error", `String raw_message) ]);
-          []
-      in
-      loop [] related
-    in
-    let related =
-      match related with
-      | [] -> None
-      | related ->
-        let make_related ({ Ocamlc_loc.path = _; line; chars }, message) =
-          let location =
-            let start, end_ =
-              let line_start, line_end =
-                match line with
-                | `Single i -> (i, i)
-                | `Range (i, j) -> (i, j)
-              in
-              let char_start, char_end =
-                match chars with
-                | None -> (1, 1)
-                | Some (x, y) -> (x, y)
-              in
-              ( Position.create ~line:line_start ~character:char_start
-              , Position.create ~line:line_end ~character:char_end )
-            in
-            let range = Range.create ~start ~end_ in
-            Location.create ~range ~uri
-          in
-          let message = string_of_message message in
-          DiagnosticRelatedInformation.create ~location ~message
-        in
-        Some (List.map related ~f:make_related)
-    in
-    (string_of_message message, related)
-  | _ -> (raw_message, None)
-
-let set_diagnostics rpc doc =
-  let state : State.t = Server.state rpc in
+let set_diagnostics detached diagnostics doc =
   let uri = Document.uri doc in
-  let create_diagnostic = Diagnostic.create ~source:"ocamllsp" in
   let async send =
     let+ () =
-      task_if_running state.detached ~f:(fun () ->
+      task_if_running detached ~f:(fun () ->
           let timer = Document.timer doc in
           let* () = Lev_fiber.Timer.Wheel.cancel timer in
           let* () = Lev_fiber.Timer.Wheel.reset timer in
@@ -176,100 +169,41 @@ let set_diagnostics rpc doc =
       let message =
         sprintf "Could not detect %s. Please install reason" ocamlmerlin_reason
       in
-      create_diagnostic ~range:Range.first_line ~message ()
+      Diagnostic.create
+        ~source:Diagnostics.ocamllsp_source
+        ~range:Range.first_line
+        ~message
+        ()
     in
-    Diagnostics.set state.diagnostics (`Merlin (uri, [ no_reason_merlin ]));
-    async (fun () -> Diagnostics.send state.diagnostics (`One uri))
+    Diagnostics.set diagnostics (`Merlin (uri, [ no_reason_merlin ]));
+    async (fun () -> Diagnostics.send diagnostics (`One uri))
   | Reason | Ocaml ->
-    let send () =
-      let* diagnostics =
-        let command =
-          Query_protocol.Errors { lexing = true; parsing = true; typing = true }
-        in
-        Document.with_pipeline_exn doc (fun pipeline ->
-            match Query_commands.dispatch pipeline command with
-            | exception Extend_main.Handshake.Error error ->
-              let message =
-                sprintf
-                  "%s.\n\
-                   Hint: install the following packages: merlin-extend, reason"
-                  error
-              in
-              [ create_diagnostic ~range:Range.first_line ~message () ]
-            | errors ->
-              let merlin_diagnostics =
-                List.rev_map errors ~f:(fun (error : Loc.error) ->
-                    let loc = Loc.loc_of_report error in
-                    let range = Range.of_loc loc in
-                    let severity =
-                      match error.source with
-                      | Warning -> DiagnosticSeverity.Warning
-                      | _ -> DiagnosticSeverity.Error
-                    in
-                    let make_message ppf m =
-                      String.trim (Format.asprintf "%a@." ppf m)
-                    in
-                    let message = make_message Loc.print_main error in
-                    let message, relatedInformation =
-                      match error.sub with
-                      | [] -> extract_related_errors uri message
-                      | _ :: _ ->
-                        ( message
-                        , Some
-                            (List.map error.sub ~f:(fun (sub : Loc.msg) ->
-                                 let location =
-                                   let range = Range.of_loc sub.loc in
-                                   Location.create ~range ~uri
-                                 in
-                                 let message =
-                                   make_message Loc.print_sub_msg sub
-                                 in
-                                 DiagnosticRelatedInformation.create ~location
-                                   ~message)) )
-                    in
-                    create_diagnostic ?relatedInformation ~range ~message
-                      ~severity ())
-              in
-              let holes_as_err_diags =
-                Query_commands.dispatch pipeline Holes
-                |> List.rev_map ~f:(fun (loc, typ) ->
-                       let range = Range.of_loc loc in
-                       let severity = DiagnosticSeverity.Error in
-                       let message =
-                         "This typed hole should be replaced with an \
-                          expression of type " ^ typ
-                       in
-                       (* we set specific diagnostic code = "hole" to be able to
-                          filter through diagnostics easily *)
-                       create_diagnostic ~code:(`String "hole") ~range ~message
-                         ~severity ())
-              in
-              (* Can we use [List.merge] instead? *)
-              List.rev_append holes_as_err_diags merlin_diagnostics
-              |> List.sort
-                   ~compare:(fun (d1 : Diagnostic.t) (d2 : Diagnostic.t) ->
-                     Range.compare d1.range d2.range))
-      in
-      Diagnostics.set state.diagnostics (`Merlin (uri, diagnostics));
-      Diagnostics.send state.diagnostics (`One uri)
-    in
-    async send
+    async (fun () ->
+        let* () = Diagnostics.merlin_diagnostics diagnostics doc in
+        Diagnostics.send diagnostics (`One uri))
 
 let on_initialize server (ip : InitializeParams.t) =
   let state : State.t = Server.state server in
   let workspaces = Workspaces.create ip in
   let+ dune =
     let progress =
-      Progress.create ip.capabilities
+      Progress.create
+        ip.capabilities
         ~report_progress:(fun progress ->
-          Server.notification server
+          Server.notification
+            server
             (Server_notification.WorkDoneProgress progress))
         ~create_task:(fun task ->
           Server.request server (Server_request.WorkDoneProgressCreate task))
     in
     let dune =
-      Dune.create workspaces ip.capabilities state.diagnostics progress
-        state.store ~log:(State.log_msg server)
+      Dune.create
+        workspaces
+        ip.capabilities
+        state.diagnostics
+        progress
+        state.store
+        ~log:(State.log_msg server)
     in
     let+ () = Fiber.Pool.task state.detached ~f:(fun () -> Dune.run dune) in
     dune
@@ -292,7 +226,7 @@ let on_initialize server (ip : InitializeParams.t) =
         ; _
         } ->
       Reply.later (fun send ->
-          let* () = send initialize_info in
+          let* () = send (initialize_info ip.capabilities) in
           let register =
             RegistrationParams.create
               ~registrations:
@@ -303,7 +237,9 @@ let on_initialize server (ip : InitializeParams.t) =
                      let documentSelector =
                        [ "cram"; "dune"; "dune-project"; "dune-workspace" ]
                        |> List.map ~f:(fun language ->
-                              DocumentFilter.create ~language ())
+                              `DocumentFilter
+                                (`TextDocumentFilter
+                                  (TextDocumentFilter.create ~language ())))
                      in
                      TextDocumentRegistrationOptions.create ~documentSelector ()
                      |> TextDocumentRegistrationOptions.yojson_of_t
@@ -312,105 +248,12 @@ let on_initialize server (ip : InitializeParams.t) =
                  in
                  [ make "textDocument/didOpen"; make "textDocument/didClose" ])
           in
-          Server.request server
+          Server.request
+            server
             (Server_request.ClientRegisterCapability register))
-    | _ -> Reply.now initialize_info
+    | _ -> Reply.now (initialize_info ip.capabilities)
   in
   (resp, state)
-
-module Code_action_error = struct
-  type t =
-    | Initial
-    | Need_merlin_extend of string
-    | Exn of Exn_with_backtrace.t
-
-  let empty = Initial
-
-  let combine x y =
-    match (x, y) with
-    | Initial, _ -> y (* [Initial] cedes to any *)
-    | _, Initial -> x
-    | Exn _, _ -> x (* [Exn] takes over any *)
-    | _, Exn _ -> y
-    | Need_merlin_extend _, Need_merlin_extend _ -> y
-end
-
-module Code_action_error_monoid = struct
-  type t = Code_action_error.t
-
-  include Stdune.Monoid.Make (Code_action_error)
-end
-
-let code_action server (params : CodeActionParams.t) =
-  let state : State.t = Server.state server in
-  let doc =
-    let uri = params.textDocument.uri in
-    let store = state.store in
-    Document_store.get_opt store uri
-  in
-  let dune_actions =
-    Dune.code_actions (State.dune state) params.textDocument.uri
-  in
-  let actions = function
-    | [] -> None
-    | xs -> Some (List.map ~f:(fun a -> `CodeAction a) xs)
-  in
-  match doc with
-  | None -> Fiber.return (Reply.now (actions dune_actions), state)
-  | Some doc -> (
-    match Document.syntax doc with
-    | Ocamllex | Menhir | Cram | Dune ->
-      let state : State.t = Server.state server in
-      Fiber.return (Reply.now (actions dune_actions), state)
-    | Ocaml | Reason ->
-      let reply () =
-        let code_action (ca : Code_action.t) =
-          match params.context.only with
-          | Some set when not (List.mem set ca.kind ~equal:Poly.equal) ->
-            Fiber.return None
-          | Some _ | None -> (
-            let+ res =
-              Fiber.map_reduce_errors
-                ~on_error:(fun (exn : Exn_with_backtrace.t) ->
-                  match exn.exn with
-                  | Extend_main.Handshake.Error error ->
-                    Fiber.return (Code_action_error.Need_merlin_extend error)
-                  | _ -> Fiber.return (Code_action_error.Exn exn))
-                (module Code_action_error_monoid)
-                (fun () -> ca.run doc params)
-            in
-            match res with
-            | Ok res -> res
-            | Error Initial -> assert false
-            | Error (Need_merlin_extend _) -> None
-            | Error (Exn exn) -> Exn_with_backtrace.reraise exn)
-        in
-        let+ code_action_results =
-          (* XXX this is a really bad use of resources. we should be batching
-             all the merlin related work *)
-          Fiber.parallel_map ~f:code_action
-            [ Action_destruct.t state
-            ; Action_inferred_intf.t state
-            ; Action_type_annotate.t
-            ; Action_construct.t
-            ; Action_refactor_open.unqualify
-            ; Action_refactor_open.qualify
-            ; Action_add_rec.t
-            ; Action_mark_remove_unused.mark
-            ; Action_mark_remove_unused.remove
-            ]
-        in
-        List.filter_opt code_action_results
-        |> List.append dune_actions |> actions
-      in
-      let later f =
-        Fiber.return
-          ( Reply.later (fun k ->
-                let* resp = f () in
-                k resp)
-          , state )
-      in
-      later reply)
 
 module Formatter = struct
   let jsonrpc_error (e : Ocamlformat.error) =
@@ -430,7 +273,9 @@ module Formatter = struct
         let* res = Ocamlformat_rpc.format_doc state.ocamlformat_rpc doc in
         match res with
         | Ok res -> Fiber.return @@ Ok res
-        | Error _ -> Ocamlformat.run doc
+        | Error _ ->
+          let* cancel = Server.cancel_token () in
+          Ocamlformat.run doc cancel
       in
       match res with
       | Ok result -> Fiber.return (Some result)
@@ -448,7 +293,8 @@ module Formatter = struct
       match Dune.for_doc (State.dune state) doc with
       | [] ->
         let message =
-          sprintf "No dune instance found. Please run dune in watch mode for %s"
+          sprintf
+            "No dune instance found. Please run dune in watch mode for %s"
             (Uri.to_path (Document.uri doc))
         in
         Jsonrpc.Response.Error.raise
@@ -523,11 +369,13 @@ let signature_help (state : State.t)
   in
   (* TODO use merlin resources efficiently and do everything in 1 thread *)
   let* application_signature =
-    Document.with_pipeline_exn doc (fun pipeline ->
-        let typer = Mpipeline.typer_result pipeline in
-        let pos = Mpipeline.get_lexing_pos pipeline pos in
-        let node = Mtyper.node_at typer pos in
-        Merlin_analysis.Signature_help.application_signature node ~prefix)
+    if Document.is_merlin doc then
+      Document.with_pipeline_exn doc (fun pipeline ->
+          let typer = Mpipeline.typer_result pipeline in
+          let pos = Mpipeline.get_lexing_pos pipeline pos in
+          let node = Mtyper.node_at typer pos in
+          Merlin_analysis.Signature_help.application_signature node ~prefix)
+    else Fiber.return None
   in
   match application_signature with
   | None ->
@@ -546,7 +394,8 @@ let signature_help (state : State.t)
     in
     let info =
       let parameters =
-        List.map application_signature.parameters
+        List.map
+          application_signature.parameters
           ~f:(fun (p : Merlin_analysis.Signature_help.parameter_info) ->
             let label =
               `Offset (offset + p.param_start, offset + p.param_end)
@@ -557,7 +406,8 @@ let signature_help (state : State.t)
         let open Option.O in
         let+ doc in
         let markdown =
-          ClientCapabilities.markdown_support (State.client_capabilities state)
+          ClientCapabilities.markdown_support
+            (State.client_capabilities state)
             ~field:(fun td ->
               let* sh = td.signatureHelp in
               let+ si = sh.signatureInformation in
@@ -568,8 +418,11 @@ let signature_help (state : State.t)
       let label = prefix ^ application_signature.signature in
       SignatureInformation.create ~label ?documentation ~parameters ()
     in
-    SignatureHelp.create ~signatures:[ info ] ~activeSignature:0
-      ?activeParameter:application_signature.active_param ()
+    SignatureHelp.create
+      ~signatures:[ info ]
+      ~activeSignature:0
+      ?activeParameter:application_signature.active_param
+      ()
 
 let text_document_lens (state : State.t)
     { CodeLensParams.textDocument = { uri }; _ } =
@@ -584,7 +437,8 @@ let text_document_lens (state : State.t)
     in
     let rec symbol_info_of_outline_item item =
       let children =
-        List.concat_map item.Query_protocol.children
+        List.concat_map
+          item.Query_protocol.children
           ~f:symbol_info_of_outline_item
       in
       match item.Query_protocol.outline_type with
@@ -634,14 +488,16 @@ let rename (state : State.t)
               let occur_end_pos = range.Range.end_ in
               { range with start = occur_end_pos }
             in
-            TextEdit.create ~range:empty_range_at_occur_end
+            TextEdit.create
+              ~range:empty_range_at_occur_end
               ~newText:(":" ^ newName)
           | _ -> make_edit ()))
   in
   let workspace_edits =
     let documentChanges =
       let open Option.O in
-      Option.value ~default:false
+      Option.value
+        ~default:false
         (let client_capabilities = State.client_capabilities state in
          let* workspace = client_capabilities.workspace in
          let* edit = workspace.workspaceEdit in
@@ -732,19 +588,46 @@ let workspace_symbol server (state : State.t) (params : WorkspaceSymbolParams.t)
     let workspaces = Workspaces.workspace_folders (State.workspaces state) in
     let* thread = Lazy_fiber.force state.symbols_thread in
     let+ symbols_results =
-      let* task =
+      let* cancel = Server.cancel_token () in
+      let task =
         Lev_fiber.Thread.task thread ~f:(fun () ->
-            Workspace_symbol.run params workspaces)
+            Workspace_symbol.run params workspaces cancel)
       in
-      let+ res = Lev_fiber.Thread.await task in
-      match res with
-      | Ok s -> s
-      | Error `Cancelled -> assert false
-      | Error (`Exn exn) -> Exn_with_backtrace.reraise exn
+      let* res, cancel =
+        match task with
+        | Error `Stopped -> Fiber.never
+        | Ok task ->
+          let maybe_cancel =
+            match cancel with
+            | None ->
+              fun f ->
+                let+ res = f () in
+                (res, Fiber.Cancel.Not_cancelled)
+            | Some token ->
+              let on_cancel () = Lev_fiber.Thread.cancel task in
+              fun f -> Fiber.Cancel.with_handler token ~on_cancel f
+          in
+          maybe_cancel @@ fun () -> Lev_fiber.Thread.await task
+      in
+      match cancel with
+      | Cancelled () ->
+        let e =
+          Jsonrpc.Response.Error.make
+            ~code:RequestCancelled
+            ~message:"cancelled"
+            ()
+        in
+        raise (Jsonrpc.Response.Error.E e)
+      | Fiber.Cancel.Not_cancelled -> (
+        match res with
+        | Ok (Ok s) -> Fiber.return s
+        | Ok (Error `Cancelled) -> assert false
+        | Error `Cancelled -> assert false
+        | Error (`Exn exn) -> Exn_with_backtrace.reraise exn)
     in
     List.partition_map symbols_results ~f:(function
-      | Ok r -> Left r
-      | Error e -> Right e)
+        | Ok r -> Left r
+        | Error e -> Right e)
   in
   let+ () =
     match errors with
@@ -820,12 +703,16 @@ let on_request :
       ; (Req_infer_intf.meth, Req_infer_intf.on_request)
       ; (Req_typed_holes.meth, Req_typed_holes.on_request)
       ; (Req_wrapping_ast_node.meth, Req_wrapping_ast_node.on_request)
+      ; ( Semantic_highlighting.Debug.meth_request_full
+        , Semantic_highlighting.Debug.on_request_full )
       ]
       |> List.assoc_opt meth
     with
     | None ->
       Jsonrpc.Response.Error.raise
-        (make_error ~code:InternalError ~message:"Unknown method"
+        (make_error
+           ~code:MethodNotFound
+           ~message:"Unknown method"
            ~data:(`Assoc [ ("method", `String meth) ])
            ())
     | Some handler ->
@@ -847,17 +734,24 @@ let on_request :
     later (fun state () -> workspace_symbol server state req) ()
   | CodeActionResolve ca -> now ca
   | ExecuteCommand command ->
-    later
-      (fun state () ->
-        let dune = State.dune state in
-        (* all of our commands are handled by dune for now *)
-        Dune.on_command dune command)
-      ()
+    if String.equal command.command view_metrics_command_name then
+      later (fun _state server -> view_metrics server) server
+    else if String.equal command.command Action_open_related.command_name then
+      later
+        (fun _state server -> Action_open_related.command_run server command)
+        server
+    else
+      later
+        (fun state () ->
+          let dune = State.dune state in
+          Dune.on_command dune command)
+        ()
   | CompletionItemResolve ci ->
     later
       (fun state () ->
         let markdown =
-          ClientCapabilities.markdown_support (State.client_capabilities state)
+          ClientCapabilities.markdown_support
+            (State.client_capabilities state)
             ~field:(fun d ->
               let open Option.O in
               let+ completion = d.completion in
@@ -874,7 +768,7 @@ let on_request :
           in
           Compl.resolve doc ci resolve Document.doc_comment ~markdown)
       ()
-  | CodeAction params -> code_action server params
+  | CodeAction params -> Code_actions.compute server params
   | TextDocumentColor _ -> now []
   | TextDocumentColorPresentation _ -> now []
   | TextDocumentHover req ->
@@ -904,7 +798,8 @@ let on_request :
       ()
   | TextDocumentCompletion params ->
     later (fun _ () -> Compl.complete state params) ()
-  | TextDocumentPrepareRename { textDocument = { uri }; position } ->
+  | TextDocumentPrepareRename
+      { textDocument = { uri }; position; workDoneToken = _ } ->
     later
       (fun _ () ->
         let doc = Document_store.get store uri in
@@ -933,11 +828,19 @@ let on_request :
       ()
   | TextDocumentOnTypeFormatting _ -> now None
   | SelectionRange req -> later selection_range req
+  | TextDocumentImplementation _ -> not_supported ()
+  | SemanticTokensFull p -> later Semantic_highlighting.on_request_full p
+  | SemanticTokensDelta p -> later Semantic_highlighting.on_request_full_delta p
   | TextDocumentMoniker _ -> not_supported ()
-  | SemanticTokensFull _ -> not_supported ()
-  | SemanticTokensDelta _ -> not_supported ()
+  | TextDocumentPrepareCallHierarchy _ -> not_supported ()
+  | TextDocumentRangeFormatting _ -> not_supported ()
+  | CallHierarchyIncomingCalls _ -> not_supported ()
+  | CallHierarchyOutgoingCalls _ -> not_supported ()
   | SemanticTokensRange _ -> not_supported ()
   | LinkedEditingRange _ -> not_supported ()
+  | WillCreateFiles _ -> not_supported ()
+  | WillRenameFiles _ -> not_supported ()
+  | WillDeleteFiles _ -> not_supported ()
 
 let on_notification server (notification : Client_notification.t) :
     State.t Fiber.t =
@@ -946,12 +849,15 @@ let on_notification server (notification : Client_notification.t) :
   match notification with
   | TextDocumentDidOpen params ->
     let* doc =
-      Document.make (State.wheel state) state.merlin_config params
+      Document.make
+        (State.wheel state)
+        state.merlin_config
+        params
         ~merlin_thread:state.merlin
     in
     assert (Document_store.get_opt store params.textDocument.uri = None);
     let* () = Document_store.open_document store doc in
-    let+ () = set_diagnostics server doc in
+    let+ () = set_diagnostics state.detached state.diagnostics doc in
     state
   | TextDocumentDidClose { textDocument = { uri } } ->
     let+ () =
@@ -966,7 +872,7 @@ let on_notification server (notification : Client_notification.t) :
       Document_store.change_document store uri ~f:(fun prev_doc ->
           Document.update_text ~version prev_doc contentChanges)
     in
-    let+ () = set_diagnostics server doc in
+    let+ () = set_diagnostics state.detached state.diagnostics doc in
     state
   | CancelRequest _ ->
     Log.log ~section:"debug" (fun () -> Log.msg "ignoring cancellation" []);
@@ -990,7 +896,7 @@ let on_notification server (notification : Client_notification.t) :
                pipeline; otherwise the diagnostics don't get updated *)
             Document.update_text doc [])
       in
-      let+ () = set_diagnostics server doc in
+      let+ () = set_diagnostics state.detached state.diagnostics doc in
       state)
   | ChangeWorkspaceFolders change ->
     let state =
@@ -999,12 +905,21 @@ let on_notification server (notification : Client_notification.t) :
     in
     Dune.update_workspaces (State.dune state) (State.workspaces state);
     Fiber.return state
-  | WillSaveTextDocument _ | Initialized | WorkDoneProgressCancel _ | Exit ->
-    Fiber.return state
+  | DidChangeWatchedFiles _
+  | DidCreateFiles _
+  | DidDeleteFiles _
+  | DidRenameFiles _
+  | LogTrace _
+  | WillSaveTextDocument _
+  | Initialized
+  | WorkDoneProgressCancel _
+  | Exit -> Fiber.return state
   | SetTrace { value } -> Fiber.return { state with trace = value }
   | UnknownNotification req ->
     let+ () =
-      State.log_msg server ~type_:Error
+      State.log_msg
+        server
+        ~type_:Error
         ~message:("Unknown notication " ^ req.method_)
     in
     state
@@ -1030,15 +945,15 @@ let start () =
          State.workspace_root state)
     in
     Diagnostics.create ~workspace_root (function
-      | [] -> Fiber.return ()
-      | diagnostics ->
-        let server = Fdecl.get server in
-        let state = Server.state server in
-        task_if_running state.detached ~f:(fun () ->
-            let batch = Server.Batch.create server in
-            List.iter diagnostics ~f:(fun d ->
-                Server.Batch.notification batch (PublishDiagnostics d));
-            Server.Batch.submit batch))
+        | [] -> Fiber.return ()
+        | diagnostics ->
+          let server = Fdecl.get server in
+          let state = Server.state server in
+          task_if_running state.detached ~f:(fun () ->
+              let batch = Server.Batch.create server in
+              List.iter diagnostics ~f:(fun d ->
+                  Server.Batch.notification batch (PublishDiagnostics d));
+              Server.Batch.submit batch))
   in
   let ocamlformat_rpc = Ocamlformat_rpc.create () in
   let* configuration = Configuration.default () in
@@ -1046,54 +961,84 @@ let start () =
   let* server =
     let+ merlin = Lev_fiber.Thread.create () in
     let symbols_thread = Lazy_fiber.create Lev_fiber.Thread.create in
-    Fdecl.set server
-      (Server.make handler stream
-         (State.create ~store ~merlin ~ocamlformat_rpc ~configuration ~detached
-            ~diagnostics ~symbols_thread ~wheel));
+    Fdecl.set
+      server
+      (Server.make
+         handler
+         stream
+         (State.create
+            ~store
+            ~merlin
+            ~ocamlformat_rpc
+            ~configuration
+            ~detached
+            ~diagnostics
+            ~symbols_thread
+            ~wheel));
     Fdecl.get server
   in
   let state = Server.state server in
-  Fiber.all_concurrently_unit
-    [ Fiber.Pool.run detached
-    ; Lev_fiber.Timer.Wheel.run wheel
-    ; Merlin_config.run state.merlin_config
-    ; (let* () = Server.start server in
-       let finalize =
-         [ Document_store.close_all store
-         ; Fiber.Pool.stop detached
-         ; Ocamlformat_rpc.stop ocamlformat_rpc
-         ; Lev_fiber.Timer.Wheel.stop wheel
-         ; Merlin_config.stop state.merlin_config
-         ]
-       in
-       let finalize =
-         match (Server.state server).init with
-         | Uninitialized -> finalize
-         | Initialized init -> Dune.stop init.dune :: finalize
-       in
-       Fiber.all_concurrently_unit finalize)
-    ; (let* state =
-         Ocamlformat_rpc.run ~logger:(State.log_msg server) ocamlformat_rpc
-       in
-       let message =
-         match state with
-         | Error `Binary_not_found ->
-           Some
-             "ocamlformat-rpc is missing, displayed types might not be \
-              properly formatted. Hint: $ opam install ocamlformat-rpc and \
-              restart the lsp server"
-         | Error `Disabled | Ok () -> None
-       in
-       match message with
-       | None -> Fiber.return ()
-       | Some message ->
-         let* (_ : InitializeParams.t) = Server.initialized server in
-         let state = Server.state server in
-         task_if_running state.detached ~f:(fun () ->
-             let log = ShowMessageParams.create ~type_:Info ~message in
-             Server.notification server (Server_notification.ShowMessage log)))
-    ]
+  let with_log_errors what f =
+    let+ (_ : (unit, unit) result) =
+      Fiber.map_reduce_errors
+        (module Monoid.Unit)
+        f
+        ~on_error:(fun exn ->
+          Format.eprintf "%s: %a@." what Exn_with_backtrace.pp_uncaught exn;
+          Fiber.return ())
+    in
+    ()
+  in
+  let run_ocamlformat_rpc () =
+    let* state =
+      Ocamlformat_rpc.run ~logger:(State.log_msg server) ocamlformat_rpc
+    in
+    let message =
+      match state with
+      | Error `Binary_not_found ->
+        Some
+          "ocamlformat-rpc is missing, displayed types might not be properly \
+           formatted. Hint: $ opam install ocamlformat-rpc and restart the lsp \
+           server"
+      | Error `Disabled | Ok () -> None
+    in
+    match message with
+    | None -> Fiber.return ()
+    | Some message ->
+      let* (_ : InitializeParams.t) = Server.initialized server in
+      let state = Server.state server in
+      task_if_running state.detached ~f:(fun () ->
+          let log = ShowMessageParams.create ~type_:Info ~message in
+          Server.notification server (Server_notification.ShowMessage log))
+  in
+  let run () =
+    Fiber.all_concurrently_unit
+      [ with_log_errors "detached" (fun () -> Fiber.Pool.run detached)
+      ; Lev_fiber.Timer.Wheel.run wheel
+      ; with_log_errors "merlin" (fun () ->
+            Merlin_config.DB.run state.merlin_config)
+      ; (let* () = Server.start server in
+         let finalize =
+           [ Document_store.close_all store
+           ; Fiber.Pool.stop detached
+           ; Ocamlformat_rpc.stop ocamlformat_rpc
+           ; Lev_fiber.Timer.Wheel.stop wheel
+           ; Merlin_config.DB.stop state.merlin_config
+           ]
+         in
+         let finalize =
+           match (Server.state server).init with
+           | Uninitialized -> finalize
+           | Initialized init -> Dune.stop init.dune :: finalize
+         in
+         Fiber.all_concurrently_unit finalize)
+      ; with_log_errors "ocamlformat-rpc" run_ocamlformat_rpc
+      ]
+  in
+  let metrics = Metrics.create () in
+  Metrics.with_metrics metrics run
 
-let run () =
+let run ~read_dot_merlin () =
+  Merlin_config.should_read_dot_merlin := read_dot_merlin;
   Unix.putenv "__MERLIN_MASTER_PID" (string_of_int (Unix.getpid ()));
-  Lev_fiber.run (Lev.Loop.default ()) ~f:start
+  Lev_fiber.run ~sigpipe:`Ignore start |> Lev_fiber.Error.ok_exn

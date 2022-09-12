@@ -44,39 +44,36 @@ module Id : sig
   val equal : t -> t -> bool
 end
 
-module Message : sig
-  module Structured : sig
-    type t =
-      [ `Assoc of (string * Json.t) list
-      | `List of Json.t list
-      ]
+module Structured : sig
+  type t =
+    [ `Assoc of (string * Json.t) list
+    | `List of Json.t list
+    ]
 
-    val of_json : Json.t -> t
+  include Json.Jsonable.S with type t := t
+end
 
-    val to_json : t -> Json.t
-  end
+module Notification : sig
+  type t =
+    { method_ : string
+    ; params : Structured.t option
+    }
 
-  type 'id t =
-    { id : 'id
+  val create : ?params:Structured.t -> method_:string -> unit -> t
+
+  val yojson_of_t : t -> Json.t
+end
+
+module Request : sig
+  type t =
+    { id : Id.t
     ; method_ : string
     ; params : Structured.t option
     }
 
-  val create : ?params:Structured.t -> id:'id -> method_:string -> unit -> 'id t
+  val create : ?params:Structured.t -> id:Id.t -> method_:string -> unit -> t
 
-  type request = Id.t t
-
-  type notification = unit t
-
-  type either = Id.t option t
-
-  val either_of_yojson : Json.t -> either
-
-  val yojson_of_either : either -> Json.t
-
-  val yojson_of_notification : notification -> Json.t
-
-  val yojson_of_request : request -> Json.t
+  val yojson_of_t : t -> Json.t
 end
 
 module Response : sig
@@ -127,8 +124,14 @@ module Response : sig
   include Json.Jsonable.S with type t := t
 end
 
-type packet =
-  | Message of Id.t option Message.t
-  | Response of Response.t
+module Packet : sig
+  type t =
+    | Notification of Notification.t
+    | Request of Request.t
+    | Response of Response.t
+    | Batch_response of Response.t list
+    | Batch_call of
+        [ `Request of Request.t | `Notification of Notification.t ] list
 
-val yojson_of_packet : packet -> Json.t
+  include Json.Jsonable.S with type t := t
+end

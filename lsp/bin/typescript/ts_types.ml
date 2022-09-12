@@ -64,11 +64,7 @@ module type S = sig
     | Tuple of typ list
     | App of typ * typ
 
-  and interface =
-    { extends : ident list
-    ; fields : field list
-    ; params : ident list
-    }
+  and interface = { fields : field list }
 
   and decl =
     | Interface of interface
@@ -137,11 +133,7 @@ struct
     | Tuple of typ list
     | App of typ * typ
 
-  and interface =
-    { extends : Ident.t list
-    ; fields : field list
-    ; params : Ident.t list
-    }
+  and interface = { fields : field list }
 
   and decl =
     | Interface of interface
@@ -171,13 +163,9 @@ struct
 
   and dyn_of_field f = Named.to_dyn field_def_of_dyn f
 
-  let dyn_of_interface { extends; fields; params } =
+  let dyn_of_interface { fields } =
     let open Dyn in
-    record
-      [ ("extends", (list Ident.to_dyn) extends)
-      ; ("fields", (list dyn_of_field) fields)
-      ; ("params", (list Ident.to_dyn) params)
-      ]
+    record [ ("fields", (list dyn_of_field) fields) ]
 
   let dyn_of_decl =
     let open Dyn in
@@ -193,10 +181,6 @@ struct
       method t (t : t) ~init =
         match t.data with
         | Interface (i : interface) ->
-          let init =
-            List.fold_left i.extends ~init ~f:(fun acc e ->
-                self#ident e ~init:acc)
-          in
           List.fold_left ~init i.fields ~f:(fun init f -> self#field f ~init)
         | Type (t : typ) -> self#typ t ~init
         | Enum_anon _ -> init
@@ -241,7 +225,7 @@ struct
 
       method interface (i : interface) =
         let fields = List.map ~f:self#field i.fields in
-        { i with fields }
+        { fields }
 
       method sum (constrs : typ list) = Sum (List.map constrs ~f:self#typ)
 
@@ -277,8 +261,8 @@ module Unresolved = struct
 
   let enum ~name ~constrs : Enum.t Named.t = { Named.name; data = constrs }
 
-  let interface ~name ~extends ~fields ~params : interface Named.t =
-    { Named.name; data = { extends; fields; params } }
+  let interface ~name ~fields : interface Named.t =
+    { Named.name; data = { fields } }
 
   let pattern_field ~name ~pat ~typ =
     { Named.name; data = Pattern { pat; typ } }
@@ -290,37 +274,22 @@ end
 module Ident = struct
   module Id = Stdune.Id.Make ()
 
-  type kind =
-    | Type_variable
-    | Name
-
-  let dyn_of_kind =
-    let open Dyn in
-    function
-    | Type_variable -> string "type_variable"
-    | Name -> string "Name"
-
   module T = struct
     type t =
       { id : Id.t
       ; name : string
-      ; kind : kind
       }
 
-    let to_dyn { id; name; kind } =
+    let to_dyn { id; name } =
       let open Dyn in
-      record
-        [ ("id", Id.to_dyn id)
-        ; ("name", String name)
-        ; ("kind", dyn_of_kind kind)
-        ]
+      record [ ("id", Id.to_dyn id); ("name", String name) ]
 
-    let compare t { id; name = _; kind = _ } = Id.compare t.id id
+    let compare t { id; name = _ } = Id.compare t.id id
   end
 
   include T
 
-  let make kind name = { id = Id.gen (); name; kind }
+  let make name = { name; id = Id.gen () }
 
   module C = Comparable.Make (T)
   module Set = C.Set
@@ -361,9 +330,11 @@ module Prim = struct
     | "boolean" -> Bool
     | "number" -> Number
     | "uinteger" -> Uinteger
-    | "any" -> Any
+    | "json" -> Any
+    | "lspany" -> Any
     | "array" -> List
-    | "unknown" | "object" -> Object
+    | "object" -> Object
+    | "lspobject" -> Object
     | _ -> resolve s
 end
 
@@ -389,20 +360,20 @@ let subst unresolved =
     method push x y =
       let params =
         String.Map.update params x ~f:(function
-          | None -> Some [ y ]
-          | Some [] -> assert false
-          | Some (y' :: xs) -> if y = y' then Some xs else Some (y :: y' :: xs))
+            | None -> Some [ y ]
+            | Some [] -> assert false
+            | Some (y' :: xs) -> if y = y' then Some xs else Some (y :: y' :: xs))
       in
       {<params>}
 
     method pop x =
       let params =
         String.Map.update params x ~f:(function
-          | None ->
-            ignore (String.Map.find_exn params x);
-            None
-          | Some [] -> assert false
-          | Some (_ :: xs) -> Some xs)
+            | None ->
+              ignore (String.Map.find_exn params x);
+              None
+            | Some [] -> assert false
+            | Some (_ :: xs) -> Some xs)
       in
       {<params>}
   end
@@ -440,16 +411,7 @@ and resolve_type (t : Unresolved.typ) ~names : Resolved.typ =
 and resolve_interface i ~names : Resolved.interface =
   let names = names#inside i.name in
   let i = i.data in
-  let params = List.map ~f:(Ident.make Type_variable) i.params in
-  { extends = List.map ~f:(resolve_ident ~names) i.extends
-  ; params = List.map params ~f:(fun i -> Prim.Resolved i)
-  ; fields =
-      (let names =
-         List.fold_left ~init:names params ~f:(fun acc (x : Ident.t) ->
-             acc#push x.name (Prim.Resolved x))
-       in
-       List.map ~f:(resolve_field ~names) i.fields)
-  }
+  { fields = List.map ~f:(resolve_field ~names) i.fields }
 
 and resolve_field f ~names : Resolved.field =
   let data : Resolved.field_def =

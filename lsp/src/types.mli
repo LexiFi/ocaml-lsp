@@ -31,6 +31,35 @@ module ProgressParams : sig
   include Json.Jsonable.S1 with type 'a t := 'a t
 end
 
+module NotebookDocumentSyncOptions : sig
+  type t = unit
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookDocumentSyncRegistrationOptions : sig
+  type t = unit
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookDocumentFilter : sig
+  type t = unit
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextDocumentFilter : sig
+  type t =
+    { language : string option
+    ; scheme : string option
+    ; pattern : string option
+    }
+
+  val create :
+    ?language:string -> ?scheme:string -> ?pattern:string -> unit -> t
+end
+
 (*$ Lsp_gen.print_mli () *)
 module SymbolTag : sig
   type t = Deprecated
@@ -70,8 +99,41 @@ module SymbolKind : sig
   include Json.Jsonable.S with type t := t
 end
 
+module ResourceOperationKind : sig
+  type t =
+    | Create
+    | Rename
+    | Delete
+
+  include Json.Jsonable.S with type t := t
+end
+
+module FailureHandlingKind : sig
+  type t =
+    | Abort
+    | Transactional
+    | TextOnlyTransactional
+    | Undo
+
+  include Json.Jsonable.S with type t := t
+end
+
+module MarkupKind : sig
+  type t =
+    | PlainText
+    | Markdown
+
+  include Json.Jsonable.S with type t := t
+end
+
 module TokenFormat : sig
   type t = Relative
+
+  include Json.Jsonable.S with type t := t
+end
+
+module PrepareSupportDefaultBehavior : sig
+  type t = Identifier
 
   include Json.Jsonable.S with type t := t
 end
@@ -84,31 +146,20 @@ module DiagnosticTag : sig
   include Json.Jsonable.S with type t := t
 end
 
-module PrepareSupportDefaultBehavior : sig
-  type t = Identifier
-
-  include Json.Jsonable.S with type t := t
-end
-
-module CodeActionKind : sig
+module FoldingRangeKind : sig
   type t =
-    | Empty
-    | QuickFix
-    | Refactor
-    | RefactorExtract
-    | RefactorInline
-    | RefactorRewrite
-    | Source
-    | SourceOrganizeImports
+    | Comment
+    | Imports
+    | Region
     | Other of string
 
   include Json.Jsonable.S with type t := t
 end
 
-module MarkupKind : sig
+module InsertTextMode : sig
   type t =
-    | PlainText
-    | Markdown
+    | AsIs
+    | AdjustIndentation
 
   include Json.Jsonable.S with type t := t
 end
@@ -144,35 +195,34 @@ module CompletionItemKind : sig
   include Json.Jsonable.S with type t := t
 end
 
-module InsertTextMode : sig
-  type t =
-    | AsIs
-    | AdjustIndentation
-
-  include Json.Jsonable.S with type t := t
-end
-
 module CompletionItemTag : sig
   type t = Deprecated
 
   include Json.Jsonable.S with type t := t
 end
 
-module FailureHandlingKind : sig
+module CodeActionKind : sig
   type t =
-    | Abort
-    | Transactional
-    | TextOnlyTransactional
-    | Undo
+    | Empty
+    | QuickFix
+    | Refactor
+    | RefactorExtract
+    | RefactorInline
+    | RefactorRewrite
+    | Source
+    | SourceOrganizeImports
+    | SourceFixAll
+    | Other of string
 
   include Json.Jsonable.S with type t := t
 end
 
-module ResourceOperationKind : sig
+module PositionEncodingKind : sig
   type t =
-    | Create
-    | Rename
-    | Delete
+    | UTF8
+    | UTF16
+    | UTF32
+    | Other of string
 
   include Json.Jsonable.S with type t := t
 end
@@ -183,6 +233,14 @@ module DiagnosticSeverity : sig
     | Warning
     | Information
     | Hint
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CodeActionTriggerKind : sig
+  type t =
+    | Invoked
+    | Automatic
 
   include Json.Jsonable.S with type t := t
 end
@@ -204,11 +262,10 @@ module InsertTextFormat : sig
   include Json.Jsonable.S with type t := t
 end
 
-module DocumentHighlightKind : sig
+module NotebookCellKind : sig
   type t =
-    | Text
-    | Read
-    | Write
+    | Markup
+    | Code
 
   include Json.Jsonable.S with type t := t
 end
@@ -222,6 +279,25 @@ module FileChangeType : sig
   include Json.Jsonable.S with type t := t
 end
 
+module WatchKind : sig
+  type t =
+    | Create
+    | Change
+    | Delete
+    | Other of string
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DocumentHighlightKind : sig
+  type t =
+    | Text
+    | Read
+    | Write
+
+  include Json.Jsonable.S with type t := t
+end
+
 module FileOperationPatternKind : sig
   type t =
     | File
@@ -230,17 +306,12 @@ module FileOperationPatternKind : sig
   include Json.Jsonable.S with type t := t
 end
 
-module FoldingRangeKind : sig
+module TraceValues : sig
   type t =
-    | Comment
-    | Imports
-    | Region
-
-  include Json.Jsonable.S with type t := t
-end
-
-module InitializeError : sig
-  type t = UnknownProtocolVersion
+    | Compact
+    | Off
+    | Messages
+    | Verbose
 
   include Json.Jsonable.S with type t := t
 end
@@ -250,6 +321,14 @@ module TextDocumentSyncKind : sig
     | None
     | Full
     | Incremental
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHintKind : sig
+  type t =
+    | Type
+    | Parameter
 
   include Json.Jsonable.S with type t := t
 end
@@ -264,6 +343,17 @@ module MessageType : sig
   include Json.Jsonable.S with type t := t
 end
 
+module UniquenessLevel : sig
+  type t =
+    | Document
+    | Project
+    | Group
+    | Scheme
+    | Global
+
+  include Json.Jsonable.S with type t := t
+end
+
 module MonikerKind : sig
   type t =
     | Import
@@ -273,13 +363,47 @@ module MonikerKind : sig
   include Json.Jsonable.S with type t := t
 end
 
-module UniquenessLevel : sig
+module SemanticTokenModifiers : sig
   type t =
-    | Document
-    | Project
-    | Group
-    | Scheme
-    | Global
+    | Declaration
+    | Definition
+    | Readonly
+    | Static
+    | Deprecated
+    | Abstract
+    | Async
+    | Modification
+    | Documentation
+    | DefaultLibrary
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SemanticTokenTypes : sig
+  type t =
+    | Namespace
+    | Type
+    | Class
+    | Enum
+    | Interface
+    | Struct
+    | TypeParameter
+    | Parameter
+    | Variable
+    | Property
+    | EnumMember
+    | Event
+    | Function
+    | Method
+    | Macro
+    | Keyword
+    | Modifier
+    | Comment
+    | String
+    | Number
+    | Regexp
+    | Operator
+    | Decorator
 
   include Json.Jsonable.S with type t := t
 end
@@ -302,11 +426,24 @@ module TextDocumentSaveReason : sig
   include Json.Jsonable.S with type t := t
 end
 
-module WatchKind : sig
+module Position : sig
   type t =
-    | Create
-    | Change
-    | Delete
+    { character : int
+    ; line : int
+    }
+
+  val create : character:int -> line:int -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module Range : sig
+  type t =
+    { end_ : Position.t
+    ; start : Position.t
+    }
+
+  val create : end_:Position.t -> start:Position.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -317,90 +454,44 @@ module ChangeAnnotationIdentifier : sig
   include Json.Jsonable.S with type t := t
 end
 
-module Position : sig
-  type t =
-    { line : int
-    ; character : int
-    }
-
-  val create : line:int -> character:int -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module Range : sig
-  type t =
-    { start : Position.t
-    ; end_ : Position.t
-    }
-
-  val create : start:Position.t -> end_:Position.t -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TextEdit : sig
-  type t =
-    { range : Range.t
-    ; newText : string
-    }
-
-  val create : range:Range.t -> newText:string -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module AnnotatedTextEdit : sig
   type t =
-    { range : Range.t
+    { annotationId : ChangeAnnotationIdentifier.t
     ; newText : string
-    ; annotationId : ChangeAnnotationIdentifier.t
+    ; range : Range.t
     }
 
   val create :
-       range:Range.t
+       annotationId:ChangeAnnotationIdentifier.t
     -> newText:string
-    -> annotationId:ChangeAnnotationIdentifier.t
+    -> range:Range.t
     -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module ChangeAnnotation : sig
-  type t =
-    { label : string
-    ; needsConfirmation : bool option
-    ; description : string option
-    }
-
-  val create :
-    label:string -> ?needsConfirmation:bool -> ?description:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DeleteFileOptions : sig
   type t =
-    { recursive : bool option
-    ; ignoreIfNotExists : bool option
+    { ignoreIfNotExists : bool option
+    ; recursive : bool option
     }
 
-  val create : ?recursive:bool -> ?ignoreIfNotExists:bool -> unit -> t
+  val create : ?ignoreIfNotExists:bool -> ?recursive:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DeleteFile : sig
   type t =
-    { uri : DocumentUri.t
+    { annotationId : ChangeAnnotationIdentifier.t option
     ; options : DeleteFileOptions.t option
-    ; annotationId : ChangeAnnotationIdentifier.t option
+    ; uri : DocumentUri.t
     }
 
   val create :
-       uri:DocumentUri.t
+       ?annotationId:ChangeAnnotationIdentifier.t
     -> ?options:DeleteFileOptions.t
-    -> ?annotationId:ChangeAnnotationIdentifier.t
+    -> uri:DocumentUri.t
     -> unit
     -> t
 
@@ -409,28 +500,28 @@ end
 
 module RenameFileOptions : sig
   type t =
-    { overwrite : bool option
-    ; ignoreIfExists : bool option
+    { ignoreIfExists : bool option
+    ; overwrite : bool option
     }
 
-  val create : ?overwrite:bool -> ?ignoreIfExists:bool -> unit -> t
+  val create : ?ignoreIfExists:bool -> ?overwrite:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module RenameFile : sig
   type t =
-    { oldUri : DocumentUri.t
+    { annotationId : ChangeAnnotationIdentifier.t option
     ; newUri : DocumentUri.t
+    ; oldUri : DocumentUri.t
     ; options : RenameFileOptions.t option
-    ; annotationId : ChangeAnnotationIdentifier.t option
     }
 
   val create :
-       oldUri:DocumentUri.t
+       ?annotationId:ChangeAnnotationIdentifier.t
     -> newUri:DocumentUri.t
+    -> oldUri:DocumentUri.t
     -> ?options:RenameFileOptions.t
-    -> ?annotationId:ChangeAnnotationIdentifier.t
     -> unit
     -> t
 
@@ -439,42 +530,28 @@ end
 
 module CreateFileOptions : sig
   type t =
-    { overwrite : bool option
-    ; ignoreIfExists : bool option
+    { ignoreIfExists : bool option
+    ; overwrite : bool option
     }
 
-  val create : ?overwrite:bool -> ?ignoreIfExists:bool -> unit -> t
+  val create : ?ignoreIfExists:bool -> ?overwrite:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CreateFile : sig
   type t =
-    { uri : DocumentUri.t
+    { annotationId : ChangeAnnotationIdentifier.t option
     ; options : CreateFileOptions.t option
-    ; annotationId : ChangeAnnotationIdentifier.t option
+    ; uri : DocumentUri.t
     }
 
   val create :
-       uri:DocumentUri.t
+       ?annotationId:ChangeAnnotationIdentifier.t
     -> ?options:CreateFileOptions.t
-    -> ?annotationId:ChangeAnnotationIdentifier.t
+    -> uri:DocumentUri.t
     -> unit
     -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module Integer : sig
-  type t = int
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TextDocumentIdentifier : sig
-  type t = { uri : DocumentUri.t }
-
-  val create : uri:DocumentUri.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -482,35 +559,61 @@ end
 module OptionalVersionedTextDocumentIdentifier : sig
   type t =
     { uri : DocumentUri.t
-    ; version : Integer.t option
+    ; version : int option
     }
 
-  val create : uri:DocumentUri.t -> ?version:Integer.t -> unit -> t
+  val create : uri:DocumentUri.t -> ?version:int -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextEdit : sig
+  type t =
+    { newText : string
+    ; range : Range.t
+    }
+
+  val create : newText:string -> range:Range.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module TextDocumentEdit : sig
   type t =
-    { textDocument : OptionalVersionedTextDocumentIdentifier.t
-    ; edits :
+    { edits :
         [ `TextEdit of TextEdit.t | `AnnotatedTextEdit of AnnotatedTextEdit.t ]
         list
+    ; textDocument : OptionalVersionedTextDocumentIdentifier.t
     }
 
   val create :
-       textDocument:OptionalVersionedTextDocumentIdentifier.t
-    -> edits:
+       edits:
          [ `TextEdit of TextEdit.t | `AnnotatedTextEdit of AnnotatedTextEdit.t ]
          list
+    -> textDocument:OptionalVersionedTextDocumentIdentifier.t
     -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module ChangeAnnotation : sig
+  type t =
+    { description : string option
+    ; label : string
+    ; needsConfirmation : bool option
+    }
+
+  val create :
+    ?description:string -> label:string -> ?needsConfirmation:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module WorkspaceEdit : sig
   type t =
-    { changes : (DocumentUri.t, TextEdit.t list) Json.Assoc.t option
+    { changeAnnotations :
+        (ChangeAnnotationIdentifier.t, ChangeAnnotation.t) Json.Assoc.t option
+    ; changes : (DocumentUri.t, TextEdit.t list) Json.Assoc.t option
     ; documentChanges :
         [ `TextDocumentEdit of TextDocumentEdit.t
         | `CreateFile of CreateFile.t
@@ -519,11 +622,12 @@ module WorkspaceEdit : sig
         ]
         list
         option
-    ; changeAnnotations : (string, ChangeAnnotation.t) Json.Assoc.t option
     }
 
   val create :
-       ?changes:(DocumentUri.t, TextEdit.t list) Json.Assoc.t
+       ?changeAnnotations:
+         (ChangeAnnotationIdentifier.t, ChangeAnnotation.t) Json.Assoc.t
+    -> ?changes:(DocumentUri.t, TextEdit.t list) Json.Assoc.t
     -> ?documentChanges:
          [ `TextDocumentEdit of TextDocumentEdit.t
          | `CreateFile of CreateFile.t
@@ -531,7 +635,6 @@ module WorkspaceEdit : sig
          | `DeleteFile of DeleteFile.t
          ]
          list
-    -> ?changeAnnotations:(string, ChangeAnnotation.t) Json.Assoc.t
     -> unit
     -> t
 
@@ -540,24 +643,43 @@ end
 
 module ApplyWorkspaceEditParams : sig
   type t =
-    { label : string option
-    ; edit : WorkspaceEdit.t
+    { edit : WorkspaceEdit.t
+    ; label : string option
     }
 
-  val create : ?label:string -> edit:WorkspaceEdit.t -> unit -> t
+  val create : edit:WorkspaceEdit.t -> ?label:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module ApplyWorkspaceEditResponse : sig
+module ApplyWorkspaceEditResult : sig
   type t =
     { applied : bool
-    ; failureReason : string option
     ; failedChange : int option
+    ; failureReason : string option
     }
 
   val create :
-    applied:bool -> ?failureReason:string -> ?failedChange:int -> unit -> t
+    applied:bool -> ?failedChange:int -> ?failureReason:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module BaseSymbolInformation : sig
+  type t =
+    { containerName : string option
+    ; kind : SymbolKind.t
+    ; name : string
+    ; tags : SymbolTag.t list option
+    }
+
+  val create :
+       ?containerName:string
+    -> kind:SymbolKind.t
+    -> name:string
+    -> ?tags:SymbolTag.t list
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -572,25 +694,25 @@ end
 
 module CallHierarchyItem : sig
   type t =
-    { name : string
-    ; kind : SymbolKind.t
-    ; tags : SymbolTag.t list option
+    { data : Json.t option
     ; detail : string option
-    ; uri : DocumentUri.t
+    ; kind : SymbolKind.t
+    ; name : string
     ; range : Range.t
     ; selectionRange : Range.t
-    ; data : Json.t option
+    ; tags : SymbolTag.t list option
+    ; uri : DocumentUri.t
     }
 
   val create :
-       name:string
-    -> kind:SymbolKind.t
-    -> ?tags:SymbolTag.t list
+       ?data:Json.t
     -> ?detail:string
-    -> uri:DocumentUri.t
+    -> kind:SymbolKind.t
+    -> name:string
     -> range:Range.t
     -> selectionRange:Range.t
-    -> ?data:Json.t
+    -> ?tags:SymbolTag.t list
+    -> uri:DocumentUri.t
     -> unit
     -> t
 
@@ -608,43 +730,19 @@ module CallHierarchyIncomingCall : sig
   include Json.Jsonable.S with type t := t
 end
 
-module PartialResultParams : sig
-  type t = { partialResultToken : ProgressToken.t option }
-
-  val create : ?partialResultToken:ProgressToken.t -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module WorkDoneProgressParams : sig
-  type t = { workDoneToken : ProgressToken.t option }
-
-  val create : ?workDoneToken:ProgressToken.t -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module CallHierarchyIncomingCallsParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { item : CallHierarchyItem.t
     ; partialResultToken : ProgressToken.t option
-    ; item : CallHierarchyItem.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       item:CallHierarchyItem.t
     -> ?partialResultToken:ProgressToken.t
-    -> item:CallHierarchyItem.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module WorkDoneProgressOptions : sig
-  type t = { workDoneProgress : bool option }
-
-  val create : ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -659,53 +757,25 @@ end
 
 module CallHierarchyOutgoingCall : sig
   type t =
-    { to_ : CallHierarchyItem.t
-    ; fromRanges : Range.t list
+    { fromRanges : Range.t list
+    ; to_ : CallHierarchyItem.t
     }
 
-  val create : to_:CallHierarchyItem.t -> fromRanges:Range.t list -> t
+  val create : fromRanges:Range.t list -> to_:CallHierarchyItem.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CallHierarchyOutgoingCallsParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { item : CallHierarchyItem.t
     ; partialResultToken : ProgressToken.t option
-    ; item : CallHierarchyItem.t
-    }
-
-  val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
-    -> item:CallHierarchyItem.t
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TextDocumentPositionParams : sig
-  type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
-    }
-
-  val create : textDocument:TextDocumentIdentifier.t -> position:Position.t -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module CallHierarchyPrepareParams : sig
-  type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
     ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> position:Position.t
+       item:CallHierarchyItem.t
+    -> ?partialResultToken:ProgressToken.t
     -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
@@ -713,37 +783,63 @@ module CallHierarchyPrepareParams : sig
   include Json.Jsonable.S with type t := t
 end
 
-module StaticRegistrationOptions : sig
-  type t = { id : string option }
+module TextDocumentIdentifier : sig
+  type t = { uri : DocumentUri.t }
 
-  val create : ?id:string -> unit -> t
+  val create : uri:DocumentUri.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CallHierarchyPrepareParams : sig
+  type t =
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookCellTextDocumentFilter : sig
+  type t =
+    { language : string option
+    ; notebook :
+        [ `String of string
+        | `NotebookDocumentFilter of NotebookDocumentFilter.t
+        ]
+    }
+
+  val create :
+       ?language:string
+    -> notebook:
+         [ `String of string
+         | `NotebookDocumentFilter of NotebookDocumentFilter.t
+         ]
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DocumentFilter : sig
   type t =
-    { language : string option
-    ; scheme : string option
-    ; pattern : string option
-    }
-
-  val create :
-    ?language:string -> ?scheme:string -> ?pattern:string -> unit -> t
+    [ `TextDocumentFilter of TextDocumentFilter.t
+    | `NotebookCellTextDocumentFilter of NotebookCellTextDocumentFilter.t
+    ]
 
   include Json.Jsonable.S with type t := t
 end
 
 module DocumentSelector : sig
-  type t = DocumentFilter.t list
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TextDocumentRegistrationOptions : sig
-  type t = { documentSelector : DocumentSelector.t option }
-
-  val create : ?documentSelector:DocumentSelector.t -> unit -> t
+  type t = [ `String of string | `DocumentFilter of DocumentFilter.t ] list
 
   include Json.Jsonable.S with type t := t
 end
@@ -751,14 +847,14 @@ end
 module CallHierarchyRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?id:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -766,39 +862,198 @@ module CallHierarchyRegistrationOptions : sig
 end
 
 module CancelParams : sig
-  type t = { id : [ `Integer of Integer.t | `String of string ] }
+  type t = { id : Jsonrpc.Id.t }
 
-  val create : id:[ `Integer of Integer.t | `String of string ] -> t
+  val create : id:Jsonrpc.Id.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module MarkdownClientCapabilities : sig
+module WorkspaceEditClientCapabilities : sig
+  type changeAnnotationSupport = { groupsOnLabel : bool option }
+
+  val create_changeAnnotationSupport :
+    ?groupsOnLabel:bool -> unit -> changeAnnotationSupport
+
   type t =
-    { parser : string
-    ; version : string option
+    { changeAnnotationSupport : changeAnnotationSupport option
+    ; documentChanges : bool option
+    ; failureHandling : FailureHandlingKind.t option
+    ; normalizesLineEndings : bool option
+    ; resourceOperations : ResourceOperationKind.t list option
     }
 
-  val create : parser:string -> ?version:string -> unit -> t
+  val create :
+       ?changeAnnotationSupport:changeAnnotationSupport
+    -> ?documentChanges:bool
+    -> ?failureHandling:FailureHandlingKind.t
+    -> ?normalizesLineEndings:bool
+    -> ?resourceOperations:ResourceOperationKind.t list
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module RegularExpressionsClientCapabilities : sig
+module WorkspaceSymbolClientCapabilities : sig
+  type tagSupport = { valueSet : SymbolTag.t list }
+
+  val create_tagSupport : valueSet:SymbolTag.t list -> tagSupport
+
+  type symbolKind = { valueSet : SymbolKind.t list option }
+
+  val create_symbolKind : ?valueSet:SymbolKind.t list -> unit -> symbolKind
+
+  type resolveSupport = { properties : string list }
+
+  val create_resolveSupport : properties:string list -> resolveSupport
+
   type t =
-    { engine : string
-    ; version : string option
+    { dynamicRegistration : bool option
+    ; resolveSupport : resolveSupport option
+    ; symbolKind : symbolKind option
+    ; tagSupport : tagSupport option
     }
 
-  val create : engine:string -> ?version:string -> unit -> t
+  val create :
+       ?dynamicRegistration:bool
+    -> ?resolveSupport:resolveSupport
+    -> ?symbolKind:symbolKind
+    -> ?tagSupport:tagSupport
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module ShowDocumentClientCapabilities : sig
-  type t = { support : bool }
+module SemanticTokensWorkspaceClientCapabilities : sig
+  type t = { refreshSupport : bool option }
 
-  val create : support:bool -> t
+  val create : ?refreshSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueWorkspaceClientCapabilities : sig
+  type t = { refreshSupport : bool option }
+
+  val create : ?refreshSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHintWorkspaceClientCapabilities : sig
+  type t = { refreshSupport : bool option }
+
+  val create : ?refreshSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module FileOperationClientCapabilities : sig
+  type t =
+    { didCreate : bool option
+    ; didDelete : bool option
+    ; didRename : bool option
+    ; dynamicRegistration : bool option
+    ; willCreate : bool option
+    ; willDelete : bool option
+    ; willRename : bool option
+    }
+
+  val create :
+       ?didCreate:bool
+    -> ?didDelete:bool
+    -> ?didRename:bool
+    -> ?dynamicRegistration:bool
+    -> ?willCreate:bool
+    -> ?willDelete:bool
+    -> ?willRename:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module ExecuteCommandClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidChangeWatchedFilesClientCapabilities : sig
+  type t =
+    { dynamicRegistration : bool option
+    ; relativePatternSupport : bool option
+    }
+
+  val create :
+    ?dynamicRegistration:bool -> ?relativePatternSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidChangeConfigurationClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DiagnosticWorkspaceClientCapabilities : sig
+  type t = { refreshSupport : bool option }
+
+  val create : ?refreshSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CodeLensWorkspaceClientCapabilities : sig
+  type t = { refreshSupport : bool option }
+
+  val create : ?refreshSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceClientCapabilities : sig
+  type t =
+    { applyEdit : bool option
+    ; codeLens : CodeLensWorkspaceClientCapabilities.t option
+    ; configuration : bool option
+    ; diagnostics : DiagnosticWorkspaceClientCapabilities.t option
+    ; didChangeConfiguration : DidChangeConfigurationClientCapabilities.t option
+    ; didChangeWatchedFiles : DidChangeWatchedFilesClientCapabilities.t option
+    ; executeCommand : ExecuteCommandClientCapabilities.t option
+    ; fileOperations : FileOperationClientCapabilities.t option
+    ; inlayHint : InlayHintWorkspaceClientCapabilities.t option
+    ; inlineValue : InlineValueWorkspaceClientCapabilities.t option
+    ; semanticTokens : SemanticTokensWorkspaceClientCapabilities.t option
+    ; symbol : WorkspaceSymbolClientCapabilities.t option
+    ; workspaceEdit : WorkspaceEditClientCapabilities.t option
+    ; workspaceFolders : bool option
+    }
+
+  val create :
+       ?applyEdit:bool
+    -> ?codeLens:CodeLensWorkspaceClientCapabilities.t
+    -> ?configuration:bool
+    -> ?diagnostics:DiagnosticWorkspaceClientCapabilities.t
+    -> ?didChangeConfiguration:DidChangeConfigurationClientCapabilities.t
+    -> ?didChangeWatchedFiles:DidChangeWatchedFilesClientCapabilities.t
+    -> ?executeCommand:ExecuteCommandClientCapabilities.t
+    -> ?fileOperations:FileOperationClientCapabilities.t
+    -> ?inlayHint:InlayHintWorkspaceClientCapabilities.t
+    -> ?inlineValue:InlineValueWorkspaceClientCapabilities.t
+    -> ?semanticTokens:SemanticTokensWorkspaceClientCapabilities.t
+    -> ?symbol:WorkspaceSymbolClientCapabilities.t
+    -> ?workspaceEdit:WorkspaceEditClientCapabilities.t
+    -> ?workspaceFolders:bool
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -816,10 +1071,100 @@ module ShowMessageRequestClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
-module MonikerClientCapabilities : sig
+module ShowDocumentClientCapabilities : sig
+  type t = { support : bool }
+
+  val create : support:bool -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WindowClientCapabilities : sig
+  type t =
+    { showDocument : ShowDocumentClientCapabilities.t option
+    ; showMessage : ShowMessageRequestClientCapabilities.t option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?showDocument:ShowDocumentClientCapabilities.t
+    -> ?showMessage:ShowMessageRequestClientCapabilities.t
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchyClientCapabilities : sig
   type t = { dynamicRegistration : bool option }
 
   val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeDefinitionClientCapabilities : sig
+  type t =
+    { dynamicRegistration : bool option
+    ; linkSupport : bool option
+    }
+
+  val create : ?dynamicRegistration:bool -> ?linkSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextDocumentSyncClientCapabilities : sig
+  type t =
+    { didSave : bool option
+    ; dynamicRegistration : bool option
+    ; willSave : bool option
+    ; willSaveWaitUntil : bool option
+    }
+
+  val create :
+       ?didSave:bool
+    -> ?dynamicRegistration:bool
+    -> ?willSave:bool
+    -> ?willSaveWaitUntil:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SignatureHelpClientCapabilities : sig
+  type parameterInformation = { labelOffsetSupport : bool option }
+
+  val create_parameterInformation :
+    ?labelOffsetSupport:bool -> unit -> parameterInformation
+
+  type signatureInformation =
+    { documentationFormat : MarkupKind.t list option
+    ; parameterInformation : parameterInformation option
+    ; activeParameterSupport : bool option
+    }
+
+  val create_signatureInformation :
+       ?documentationFormat:MarkupKind.t list
+    -> ?parameterInformation:parameterInformation
+    -> ?activeParameterSupport:bool
+    -> unit
+    -> signatureInformation
+
+  type t =
+    { contextSupport : bool option
+    ; dynamicRegistration : bool option
+    ; signatureInformation : signatureInformation option
+    }
+
+  val create :
+       ?contextSupport:bool
+    -> ?dynamicRegistration:bool
+    -> ?signatureInformation:signatureInformation
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -838,33 +1183,29 @@ module SemanticTokensClientCapabilities : sig
     ?range:bool -> ?full:[ `Bool of bool | `Full of full ] -> unit -> requests
 
   type t =
-    { dynamicRegistration : bool option
-    ; requests : requests
-    ; tokenTypes : string list
-    ; tokenModifiers : string list
+    { augmentsSyntaxTokens : bool option
+    ; dynamicRegistration : bool option
     ; formats : TokenFormat.t list
-    ; overlappingTokenSupport : bool option
     ; multilineTokenSupport : bool option
+    ; overlappingTokenSupport : bool option
+    ; requests : requests
+    ; serverCancelSupport : bool option
+    ; tokenModifiers : string list
+    ; tokenTypes : string list
     }
 
   val create :
-       ?dynamicRegistration:bool
-    -> requests:requests
-    -> tokenTypes:string list
-    -> tokenModifiers:string list
+       ?augmentsSyntaxTokens:bool
+    -> ?dynamicRegistration:bool
     -> formats:TokenFormat.t list
-    -> ?overlappingTokenSupport:bool
     -> ?multilineTokenSupport:bool
+    -> ?overlappingTokenSupport:bool
+    -> requests:requests
+    -> ?serverCancelSupport:bool
+    -> tokenModifiers:string list
+    -> tokenTypes:string list
     -> unit
     -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module LinkedEditingRangeClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
-
-  val create : ?dynamicRegistration:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -877,68 +1218,26 @@ module SelectionRangeClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
-module FoldingRangeClientCapabilities : sig
-  type t =
-    { dynamicRegistration : bool option
-    ; rangeLimit : int option
-    ; lineFoldingOnly : bool option
-    }
-
-  val create :
-       ?dynamicRegistration:bool
-    -> ?rangeLimit:int
-    -> ?lineFoldingOnly:bool
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module PublishDiagnosticsClientCapabilities : sig
-  type tagSupport = { valueSet : DiagnosticTag.t list }
-
-  val create_tagSupport : valueSet:DiagnosticTag.t list -> tagSupport
-
-  type t =
-    { relatedInformation : bool option
-    ; tagSupport : tagSupport option
-    ; versionSupport : bool option
-    ; codeDescriptionSupport : bool option
-    ; dataSupport : bool option
-    }
-
-  val create :
-       ?relatedInformation:bool
-    -> ?tagSupport:tagSupport
-    -> ?versionSupport:bool
-    -> ?codeDescriptionSupport:bool
-    -> ?dataSupport:bool
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module RenameClientCapabilities : sig
   type t =
     { dynamicRegistration : bool option
+    ; honorsChangeAnnotations : bool option
     ; prepareSupport : bool option
     ; prepareSupportDefaultBehavior : PrepareSupportDefaultBehavior.t option
-    ; honorsChangeAnnotations : bool option
     }
 
   val create :
        ?dynamicRegistration:bool
+    -> ?honorsChangeAnnotations:bool
     -> ?prepareSupport:bool
     -> ?prepareSupportDefaultBehavior:PrepareSupportDefaultBehavior.t
-    -> ?honorsChangeAnnotations:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module DocumentOnTypeFormattingClientCapabilities : sig
+module ReferenceClientCapabilities : sig
   type t = { dynamicRegistration : bool option }
 
   val create : ?dynamicRegistration:bool -> unit -> t
@@ -954,6 +1253,102 @@ module DocumentRangeFormattingClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
+module PublishDiagnosticsClientCapabilities : sig
+  type tagSupport = { valueSet : DiagnosticTag.t list }
+
+  val create_tagSupport : valueSet:DiagnosticTag.t list -> tagSupport
+
+  type t =
+    { codeDescriptionSupport : bool option
+    ; dataSupport : bool option
+    ; relatedInformation : bool option
+    ; tagSupport : tagSupport option
+    ; versionSupport : bool option
+    }
+
+  val create :
+       ?codeDescriptionSupport:bool
+    -> ?dataSupport:bool
+    -> ?relatedInformation:bool
+    -> ?tagSupport:tagSupport
+    -> ?versionSupport:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DocumentOnTypeFormattingClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module MonikerClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module LinkedEditingRangeClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHintClientCapabilities : sig
+  type resolveSupport = { properties : string list }
+
+  val create_resolveSupport : properties:string list -> resolveSupport
+
+  type t =
+    { dynamicRegistration : bool option
+    ; resolveSupport : resolveSupport option
+    }
+
+  val create :
+    ?dynamicRegistration:bool -> ?resolveSupport:resolveSupport -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module ImplementationClientCapabilities : sig
+  type t =
+    { dynamicRegistration : bool option
+    ; linkSupport : bool option
+    }
+
+  val create : ?dynamicRegistration:bool -> ?linkSupport:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module HoverClientCapabilities : sig
+  type t =
+    { contentFormat : MarkupKind.t list option
+    ; dynamicRegistration : bool option
+    }
+
+  val create :
+    ?contentFormat:MarkupKind.t list -> ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DocumentFormattingClientCapabilities : sig
   type t = { dynamicRegistration : bool option }
 
@@ -962,65 +1357,30 @@ module DocumentFormattingClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
-module DocumentColorClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
+module FoldingRangeClientCapabilities : sig
+  type foldingRangeKind = { valueSet : FoldingRangeKind.t list option }
 
-  val create : ?dynamicRegistration:bool -> unit -> t
+  val create_foldingRangeKind :
+    ?valueSet:FoldingRangeKind.t list -> unit -> foldingRangeKind
 
-  include Json.Jsonable.S with type t := t
-end
+  type foldingRange = { collapsedText : bool option }
 
-module DocumentLinkClientCapabilities : sig
-  type t =
-    { dynamicRegistration : bool option
-    ; tooltipSupport : bool option
-    }
-
-  val create : ?dynamicRegistration:bool -> ?tooltipSupport:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module CodeLensClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
-
-  val create : ?dynamicRegistration:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module CodeActionClientCapabilities : sig
-  type resolveSupport = { properties : string list }
-
-  val create_resolveSupport : properties:string list -> resolveSupport
-
-  type codeActionKind = { valueSet : CodeActionKind.t list }
-
-  val create_codeActionKind : valueSet:CodeActionKind.t list -> codeActionKind
-
-  type codeActionLiteralSupport = { codeActionKind : codeActionKind }
-
-  val create_codeActionLiteralSupport :
-    codeActionKind:codeActionKind -> codeActionLiteralSupport
+  val create_foldingRange : ?collapsedText:bool -> unit -> foldingRange
 
   type t =
     { dynamicRegistration : bool option
-    ; codeActionLiteralSupport : codeActionLiteralSupport option
-    ; isPreferredSupport : bool option
-    ; disabledSupport : bool option
-    ; dataSupport : bool option
-    ; resolveSupport : resolveSupport option
-    ; honorsChangeAnnotations : bool option
+    ; foldingRange : foldingRange option
+    ; foldingRangeKind : foldingRangeKind option
+    ; lineFoldingOnly : bool option
+    ; rangeLimit : int option
     }
 
   val create :
        ?dynamicRegistration:bool
-    -> ?codeActionLiteralSupport:codeActionLiteralSupport
-    -> ?isPreferredSupport:bool
-    -> ?disabledSupport:bool
-    -> ?dataSupport:bool
-    -> ?resolveSupport:resolveSupport
-    -> ?honorsChangeAnnotations:bool
+    -> ?foldingRange:foldingRange
+    -> ?foldingRangeKind:foldingRangeKind
+    -> ?lineFoldingOnly:bool
+    -> ?rangeLimit:int
     -> unit
     -> t
 
@@ -1038,20 +1398,31 @@ module DocumentSymbolClientCapabilities : sig
 
   type t =
     { dynamicRegistration : bool option
-    ; symbolKind : symbolKind option
     ; hierarchicalDocumentSymbolSupport : bool option
-    ; tagSupport : tagSupport option
     ; labelSupport : bool option
+    ; symbolKind : symbolKind option
+    ; tagSupport : tagSupport option
     }
 
   val create :
        ?dynamicRegistration:bool
-    -> ?symbolKind:symbolKind
     -> ?hierarchicalDocumentSymbolSupport:bool
-    -> ?tagSupport:tagSupport
     -> ?labelSupport:bool
+    -> ?symbolKind:symbolKind
+    -> ?tagSupport:tagSupport
     -> unit
     -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DocumentLinkClientCapabilities : sig
+  type t =
+    { dynamicRegistration : bool option
+    ; tooltipSupport : bool option
+    }
+
+  val create : ?dynamicRegistration:bool -> ?tooltipSupport:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1064,32 +1435,14 @@ module DocumentHighlightClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
-module ReferenceClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
-
-  val create : ?dynamicRegistration:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module ImplementationClientCapabilities : sig
+module DiagnosticClientCapabilities : sig
   type t =
     { dynamicRegistration : bool option
-    ; linkSupport : bool option
+    ; relatedDocumentSupport : bool option
     }
 
-  val create : ?dynamicRegistration:bool -> ?linkSupport:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TypeDefinitionClientCapabilities : sig
-  type t =
-    { dynamicRegistration : bool option
-    ; linkSupport : bool option
-    }
-
-  val create : ?dynamicRegistration:bool -> ?linkSupport:bool -> unit -> t
+  val create :
+    ?dynamicRegistration:bool -> ?relatedDocumentSupport:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1116,54 +1469,12 @@ module DeclarationClientCapabilities : sig
   include Json.Jsonable.S with type t := t
 end
 
-module SignatureHelpClientCapabilities : sig
-  type parameterInformation = { labelOffsetSupport : bool option }
-
-  val create_parameterInformation :
-    ?labelOffsetSupport:bool -> unit -> parameterInformation
-
-  type signatureInformation =
-    { documentationFormat : MarkupKind.t list option
-    ; parameterInformation : parameterInformation option
-    ; activeParameterSupport : bool option
-    }
-
-  val create_signatureInformation :
-       ?documentationFormat:MarkupKind.t list
-    -> ?parameterInformation:parameterInformation
-    -> ?activeParameterSupport:bool
-    -> unit
-    -> signatureInformation
-
-  type t =
-    { dynamicRegistration : bool option
-    ; signatureInformation : signatureInformation option
-    ; contextSupport : bool option
-    }
-
-  val create :
-       ?dynamicRegistration:bool
-    -> ?signatureInformation:signatureInformation
-    -> ?contextSupport:bool
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module HoverClientCapabilities : sig
-  type t =
-    { dynamicRegistration : bool option
-    ; contentFormat : MarkupKind.t list option
-    }
-
-  val create :
-    ?dynamicRegistration:bool -> ?contentFormat:MarkupKind.t list -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module CompletionClientCapabilities : sig
+  type completionList = { itemDefaults : string list option }
+
+  val create_completionList :
+    ?itemDefaults:string list -> unit -> completionList
+
   type completionItemKind = { valueSet : CompletionItemKind.t list option }
 
   val create_completionItemKind :
@@ -1192,6 +1503,7 @@ module CompletionClientCapabilities : sig
     ; insertReplaceSupport : bool option
     ; resolveSupport : resolveSupport option
     ; insertTextModeSupport : insertTextModeSupport option
+    ; labelDetailsSupport : bool option
     }
 
   val create_completionItem :
@@ -1204,40 +1516,80 @@ module CompletionClientCapabilities : sig
     -> ?insertReplaceSupport:bool
     -> ?resolveSupport:resolveSupport
     -> ?insertTextModeSupport:insertTextModeSupport
+    -> ?labelDetailsSupport:bool
     -> unit
     -> completionItem
 
   type t =
-    { dynamicRegistration : bool option
-    ; completionItem : completionItem option
+    { completionItem : completionItem option
     ; completionItemKind : completionItemKind option
+    ; completionList : completionList option
     ; contextSupport : bool option
+    ; dynamicRegistration : bool option
+    ; insertTextMode : InsertTextMode.t option
     }
 
   val create :
-       ?dynamicRegistration:bool
-    -> ?completionItem:completionItem
+       ?completionItem:completionItem
     -> ?completionItemKind:completionItemKind
+    -> ?completionList:completionList
     -> ?contextSupport:bool
+    -> ?dynamicRegistration:bool
+    -> ?insertTextMode:InsertTextMode.t
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module TextDocumentSyncClientCapabilities : sig
+module DocumentColorClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CodeLensClientCapabilities : sig
+  type t = { dynamicRegistration : bool option }
+
+  val create : ?dynamicRegistration:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CodeActionClientCapabilities : sig
+  type resolveSupport = { properties : string list }
+
+  val create_resolveSupport : properties:string list -> resolveSupport
+
+  type codeActionKind = { valueSet : CodeActionKind.t list }
+
+  val create_codeActionKind : valueSet:CodeActionKind.t list -> codeActionKind
+
+  type codeActionLiteralSupport = { codeActionKind : codeActionKind }
+
+  val create_codeActionLiteralSupport :
+    codeActionKind:codeActionKind -> codeActionLiteralSupport
+
   type t =
-    { dynamicRegistration : bool option
-    ; willSave : bool option
-    ; willSaveWaitUntil : bool option
-    ; didSave : bool option
+    { codeActionLiteralSupport : codeActionLiteralSupport option
+    ; dataSupport : bool option
+    ; disabledSupport : bool option
+    ; dynamicRegistration : bool option
+    ; honorsChangeAnnotations : bool option
+    ; isPreferredSupport : bool option
+    ; resolveSupport : resolveSupport option
     }
 
   val create :
-       ?dynamicRegistration:bool
-    -> ?willSave:bool
-    -> ?willSaveWaitUntil:bool
-    -> ?didSave:bool
+       ?codeActionLiteralSupport:codeActionLiteralSupport
+    -> ?dataSupport:bool
+    -> ?disabledSupport:bool
+    -> ?dynamicRegistration:bool
+    -> ?honorsChangeAnnotations:bool
+    -> ?isPreferredSupport:bool
+    -> ?resolveSupport:resolveSupport
     -> unit
     -> t
 
@@ -1246,152 +1598,140 @@ end
 
 module TextDocumentClientCapabilities : sig
   type t =
-    { synchronization : TextDocumentSyncClientCapabilities.t option
-    ; completion : CompletionClientCapabilities.t option
-    ; hover : HoverClientCapabilities.t option
-    ; signatureHelp : SignatureHelpClientCapabilities.t option
-    ; declaration : DeclarationClientCapabilities.t option
-    ; definition : DefinitionClientCapabilities.t option
-    ; typeDefinition : TypeDefinitionClientCapabilities.t option
-    ; implementation : ImplementationClientCapabilities.t option
-    ; references : ReferenceClientCapabilities.t option
-    ; documentHighlight : DocumentHighlightClientCapabilities.t option
-    ; documentSymbol : DocumentSymbolClientCapabilities.t option
+    { callHierarchy : CallHierarchyClientCapabilities.t option
     ; codeAction : CodeActionClientCapabilities.t option
     ; codeLens : CodeLensClientCapabilities.t option
-    ; documentLink : DocumentLinkClientCapabilities.t option
     ; colorProvider : DocumentColorClientCapabilities.t option
-    ; formatting : DocumentFormattingClientCapabilities.t option
-    ; rangeFormatting : DocumentRangeFormattingClientCapabilities.t option
-    ; onTypeFormatting : DocumentOnTypeFormattingClientCapabilities.t option
-    ; rename : RenameClientCapabilities.t option
-    ; publishDiagnostics : PublishDiagnosticsClientCapabilities.t option
+    ; completion : CompletionClientCapabilities.t option
+    ; declaration : DeclarationClientCapabilities.t option
+    ; definition : DefinitionClientCapabilities.t option
+    ; diagnostic : DiagnosticClientCapabilities.t option
+    ; documentHighlight : DocumentHighlightClientCapabilities.t option
+    ; documentLink : DocumentLinkClientCapabilities.t option
+    ; documentSymbol : DocumentSymbolClientCapabilities.t option
     ; foldingRange : FoldingRangeClientCapabilities.t option
-    ; selectionRange : SelectionRangeClientCapabilities.t option
+    ; formatting : DocumentFormattingClientCapabilities.t option
+    ; hover : HoverClientCapabilities.t option
+    ; implementation : ImplementationClientCapabilities.t option
+    ; inlayHint : InlayHintClientCapabilities.t option
+    ; inlineValue : InlineValueClientCapabilities.t option
     ; linkedEditingRange : LinkedEditingRangeClientCapabilities.t option
-    ; callHierarchy : CallHierarchyClientCapabilities.t option
-    ; semanticTokens : SemanticTokensClientCapabilities.t option
     ; moniker : MonikerClientCapabilities.t option
+    ; onTypeFormatting : DocumentOnTypeFormattingClientCapabilities.t option
+    ; publishDiagnostics : PublishDiagnosticsClientCapabilities.t option
+    ; rangeFormatting : DocumentRangeFormattingClientCapabilities.t option
+    ; references : ReferenceClientCapabilities.t option
+    ; rename : RenameClientCapabilities.t option
+    ; selectionRange : SelectionRangeClientCapabilities.t option
+    ; semanticTokens : SemanticTokensClientCapabilities.t option
+    ; signatureHelp : SignatureHelpClientCapabilities.t option
+    ; synchronization : TextDocumentSyncClientCapabilities.t option
+    ; typeDefinition : TypeDefinitionClientCapabilities.t option
+    ; typeHierarchy : TypeHierarchyClientCapabilities.t option
     }
 
   val create :
-       ?synchronization:TextDocumentSyncClientCapabilities.t
-    -> ?completion:CompletionClientCapabilities.t
-    -> ?hover:HoverClientCapabilities.t
-    -> ?signatureHelp:SignatureHelpClientCapabilities.t
-    -> ?declaration:DeclarationClientCapabilities.t
-    -> ?definition:DefinitionClientCapabilities.t
-    -> ?typeDefinition:TypeDefinitionClientCapabilities.t
-    -> ?implementation:ImplementationClientCapabilities.t
-    -> ?references:ReferenceClientCapabilities.t
-    -> ?documentHighlight:DocumentHighlightClientCapabilities.t
-    -> ?documentSymbol:DocumentSymbolClientCapabilities.t
+       ?callHierarchy:CallHierarchyClientCapabilities.t
     -> ?codeAction:CodeActionClientCapabilities.t
     -> ?codeLens:CodeLensClientCapabilities.t
-    -> ?documentLink:DocumentLinkClientCapabilities.t
     -> ?colorProvider:DocumentColorClientCapabilities.t
-    -> ?formatting:DocumentFormattingClientCapabilities.t
-    -> ?rangeFormatting:DocumentRangeFormattingClientCapabilities.t
-    -> ?onTypeFormatting:DocumentOnTypeFormattingClientCapabilities.t
-    -> ?rename:RenameClientCapabilities.t
-    -> ?publishDiagnostics:PublishDiagnosticsClientCapabilities.t
+    -> ?completion:CompletionClientCapabilities.t
+    -> ?declaration:DeclarationClientCapabilities.t
+    -> ?definition:DefinitionClientCapabilities.t
+    -> ?diagnostic:DiagnosticClientCapabilities.t
+    -> ?documentHighlight:DocumentHighlightClientCapabilities.t
+    -> ?documentLink:DocumentLinkClientCapabilities.t
+    -> ?documentSymbol:DocumentSymbolClientCapabilities.t
     -> ?foldingRange:FoldingRangeClientCapabilities.t
-    -> ?selectionRange:SelectionRangeClientCapabilities.t
+    -> ?formatting:DocumentFormattingClientCapabilities.t
+    -> ?hover:HoverClientCapabilities.t
+    -> ?implementation:ImplementationClientCapabilities.t
+    -> ?inlayHint:InlayHintClientCapabilities.t
+    -> ?inlineValue:InlineValueClientCapabilities.t
     -> ?linkedEditingRange:LinkedEditingRangeClientCapabilities.t
-    -> ?callHierarchy:CallHierarchyClientCapabilities.t
-    -> ?semanticTokens:SemanticTokensClientCapabilities.t
     -> ?moniker:MonikerClientCapabilities.t
+    -> ?onTypeFormatting:DocumentOnTypeFormattingClientCapabilities.t
+    -> ?publishDiagnostics:PublishDiagnosticsClientCapabilities.t
+    -> ?rangeFormatting:DocumentRangeFormattingClientCapabilities.t
+    -> ?references:ReferenceClientCapabilities.t
+    -> ?rename:RenameClientCapabilities.t
+    -> ?selectionRange:SelectionRangeClientCapabilities.t
+    -> ?semanticTokens:SemanticTokensClientCapabilities.t
+    -> ?signatureHelp:SignatureHelpClientCapabilities.t
+    -> ?synchronization:TextDocumentSyncClientCapabilities.t
+    -> ?typeDefinition:TypeDefinitionClientCapabilities.t
+    -> ?typeHierarchy:TypeHierarchyClientCapabilities.t
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module CodeLensWorkspaceClientCapabilities : sig
-  type t = { refreshSupport : bool option }
-
-  val create : ?refreshSupport:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module SemanticTokensWorkspaceClientCapabilities : sig
-  type t = { refreshSupport : bool option }
-
-  val create : ?refreshSupport:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module ExecuteCommandClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
-
-  val create : ?dynamicRegistration:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module WorkspaceSymbolClientCapabilities : sig
-  type tagSupport = { valueSet : SymbolTag.t list }
-
-  val create_tagSupport : valueSet:SymbolTag.t list -> tagSupport
-
-  type symbolKind = { valueSet : SymbolKind.t list option }
-
-  val create_symbolKind : ?valueSet:SymbolKind.t list -> unit -> symbolKind
-
+module NotebookDocumentSyncClientCapabilities : sig
   type t =
     { dynamicRegistration : bool option
-    ; symbolKind : symbolKind option
-    ; tagSupport : tagSupport option
+    ; executionSummarySupport : bool option
     }
 
   val create :
-       ?dynamicRegistration:bool
-    -> ?symbolKind:symbolKind
-    -> ?tagSupport:tagSupport
-    -> unit
-    -> t
+    ?dynamicRegistration:bool -> ?executionSummarySupport:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module DidChangeWatchedFilesClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
+module NotebookDocumentClientCapabilities : sig
+  type t = { synchronization : NotebookDocumentSyncClientCapabilities.t }
 
-  val create : ?dynamicRegistration:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module DidChangeConfigurationClientCapabilities : sig
-  type t = { dynamicRegistration : bool option }
-
-  val create : ?dynamicRegistration:bool -> unit -> t
+  val create : synchronization:NotebookDocumentSyncClientCapabilities.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module WorkspaceEditClientCapabilities : sig
-  type changeAnnotationSupport = { groupsOnLabel : bool option }
+module RegularExpressionsClientCapabilities : sig
+  type t =
+    { engine : string
+    ; version : string option
+    }
 
-  val create_changeAnnotationSupport :
-    ?groupsOnLabel:bool -> unit -> changeAnnotationSupport
+  val create : engine:string -> ?version:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module MarkdownClientCapabilities : sig
+  type t =
+    { allowedTags : string list option
+    ; parser : string
+    ; version : string option
+    }
+
+  val create :
+    ?allowedTags:string list -> parser:string -> ?version:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module GeneralClientCapabilities : sig
+  type staleRequestSupport =
+    { cancel : bool
+    ; retryOnContentModified : string list
+    }
+
+  val create_staleRequestSupport :
+    cancel:bool -> retryOnContentModified:string list -> staleRequestSupport
 
   type t =
-    { documentChanges : bool option
-    ; resourceOperations : ResourceOperationKind.t list option
-    ; failureHandling : FailureHandlingKind.t option
-    ; normalizesLineEndings : bool option
-    ; changeAnnotationSupport : changeAnnotationSupport option
+    { markdown : MarkdownClientCapabilities.t option
+    ; positionEncodings : PositionEncodingKind.t list option
+    ; regularExpressions : RegularExpressionsClientCapabilities.t option
+    ; staleRequestSupport : staleRequestSupport option
     }
 
   val create :
-       ?documentChanges:bool
-    -> ?resourceOperations:ResourceOperationKind.t list
-    -> ?failureHandling:FailureHandlingKind.t
-    -> ?normalizesLineEndings:bool
-    -> ?changeAnnotationSupport:changeAnnotationSupport
+       ?markdown:MarkdownClientCapabilities.t
+    -> ?positionEncodings:PositionEncodingKind.t list
+    -> ?regularExpressions:RegularExpressionsClientCapabilities.t
+    -> ?staleRequestSupport:staleRequestSupport
     -> unit
     -> t
 
@@ -1399,120 +1739,35 @@ module WorkspaceEditClientCapabilities : sig
 end
 
 module ClientCapabilities : sig
-  type general =
-    { regularExpressions : RegularExpressionsClientCapabilities.t option
-    ; markdown : MarkdownClientCapabilities.t option
-    }
-
-  val create_general :
-       ?regularExpressions:RegularExpressionsClientCapabilities.t
-    -> ?markdown:MarkdownClientCapabilities.t
-    -> unit
-    -> general
-
-  type window =
-    { workDoneProgress : bool option
-    ; showMessage : ShowMessageRequestClientCapabilities.t option
-    ; showDocument : ShowDocumentClientCapabilities.t option
-    }
-
-  val create_window :
-       ?workDoneProgress:bool
-    -> ?showMessage:ShowMessageRequestClientCapabilities.t
-    -> ?showDocument:ShowDocumentClientCapabilities.t
-    -> unit
-    -> window
-
-  type fileOperations =
-    { dynamicRegistration : bool option
-    ; didCreate : bool option
-    ; willCreate : bool option
-    ; didRename : bool option
-    ; willRename : bool option
-    ; didDelete : bool option
-    ; willDelete : bool option
-    }
-
-  val create_fileOperations :
-       ?dynamicRegistration:bool
-    -> ?didCreate:bool
-    -> ?willCreate:bool
-    -> ?didRename:bool
-    -> ?willRename:bool
-    -> ?didDelete:bool
-    -> ?willDelete:bool
-    -> unit
-    -> fileOperations
-
-  type workspace =
-    { applyEdit : bool option
-    ; workspaceEdit : WorkspaceEditClientCapabilities.t option
-    ; didChangeConfiguration : DidChangeConfigurationClientCapabilities.t option
-    ; didChangeWatchedFiles : DidChangeWatchedFilesClientCapabilities.t option
-    ; symbol : WorkspaceSymbolClientCapabilities.t option
-    ; executeCommand : ExecuteCommandClientCapabilities.t option
-    ; workspaceFolders : bool option
-    ; configuration : bool option
-    ; semanticTokens : SemanticTokensWorkspaceClientCapabilities.t option
-    ; codeLens : CodeLensWorkspaceClientCapabilities.t option
-    ; fileOperations : fileOperations option
-    }
-
-  val create_workspace :
-       ?applyEdit:bool
-    -> ?workspaceEdit:WorkspaceEditClientCapabilities.t
-    -> ?didChangeConfiguration:DidChangeConfigurationClientCapabilities.t
-    -> ?didChangeWatchedFiles:DidChangeWatchedFilesClientCapabilities.t
-    -> ?symbol:WorkspaceSymbolClientCapabilities.t
-    -> ?executeCommand:ExecuteCommandClientCapabilities.t
-    -> ?workspaceFolders:bool
-    -> ?configuration:bool
-    -> ?semanticTokens:SemanticTokensWorkspaceClientCapabilities.t
-    -> ?codeLens:CodeLensWorkspaceClientCapabilities.t
-    -> ?fileOperations:fileOperations
-    -> unit
-    -> workspace
-
   type t =
-    { workspace : workspace option
+    { experimental : Json.t option
+    ; general : GeneralClientCapabilities.t option
+    ; notebookDocument : NotebookDocumentClientCapabilities.t option
     ; textDocument : TextDocumentClientCapabilities.t option
-    ; window : window option
-    ; general : general option
-    ; experimental : Json.t option
+    ; window : WindowClientCapabilities.t option
+    ; workspace : WorkspaceClientCapabilities.t option
     }
 
   val create :
-       ?workspace:workspace
+       ?experimental:Json.t
+    -> ?general:GeneralClientCapabilities.t
+    -> ?notebookDocument:NotebookDocumentClientCapabilities.t
     -> ?textDocument:TextDocumentClientCapabilities.t
-    -> ?window:window
-    -> ?general:general
-    -> ?experimental:Json.t
+    -> ?window:WindowClientCapabilities.t
+    -> ?workspace:WorkspaceClientCapabilities.t
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module Command : sig
-  type t =
-    { title : string
-    ; command : string
-    ; arguments : Json.t list option
-    }
-
-  val create :
-    title:string -> command:string -> ?arguments:Json.t list -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module Location : sig
   type t =
-    { uri : DocumentUri.t
-    ; range : Range.t
+    { range : Range.t
+    ; uri : DocumentUri.t
     }
 
-  val create : uri:DocumentUri.t -> range:Range.t -> t
+  val create : range:Range.t -> uri:DocumentUri.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1528,45 +1783,52 @@ module DiagnosticRelatedInformation : sig
   include Json.Jsonable.S with type t := t
 end
 
-module URI : sig
-  type t = string
-
-  include Json.Jsonable.S with type t := t
-end
-
 module CodeDescription : sig
-  type t = { href : URI.t }
+  type t = { href : DocumentUri.t }
 
-  val create : href:URI.t -> t
+  val create : href:DocumentUri.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module Diagnostic : sig
   type t =
-    { range : Range.t
-    ; severity : DiagnosticSeverity.t option
-    ; code : [ `Integer of Integer.t | `String of string ] option
+    { code : Jsonrpc.Id.t option
     ; codeDescription : CodeDescription.t option
-    ; source : string option
-    ; message : string
-    ; tags : DiagnosticTag.t list option
-    ; relatedInformation : DiagnosticRelatedInformation.t list option
     ; data : Json.t option
+    ; message : string
+    ; range : Range.t
+    ; relatedInformation : DiagnosticRelatedInformation.t list option
+    ; severity : DiagnosticSeverity.t option
+    ; source : string option
+    ; tags : DiagnosticTag.t list option
     }
 
   val create :
-       range:Range.t
-    -> ?severity:DiagnosticSeverity.t
-    -> ?code:[ `Integer of Integer.t | `String of string ]
+       ?code:Jsonrpc.Id.t
     -> ?codeDescription:CodeDescription.t
-    -> ?source:string
-    -> message:string
-    -> ?tags:DiagnosticTag.t list
-    -> ?relatedInformation:DiagnosticRelatedInformation.t list
     -> ?data:Json.t
+    -> message:string
+    -> range:Range.t
+    -> ?relatedInformation:DiagnosticRelatedInformation.t list
+    -> ?severity:DiagnosticSeverity.t
+    -> ?source:string
+    -> ?tags:DiagnosticTag.t list
     -> unit
     -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module Command : sig
+  type t =
+    { arguments : Json.t list option
+    ; command : string
+    ; title : string
+    }
+
+  val create :
+    ?arguments:Json.t list -> command:string -> title:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1577,25 +1839,25 @@ module CodeAction : sig
   val create_disabled : reason:string -> disabled
 
   type t =
-    { title : string
-    ; kind : CodeActionKind.t option
+    { command : Command.t option
+    ; data : Json.t option
     ; diagnostics : Diagnostic.t list option
-    ; isPreferred : bool option
     ; disabled : disabled option
     ; edit : WorkspaceEdit.t option
-    ; command : Command.t option
-    ; data : Json.t option
+    ; isPreferred : bool option
+    ; kind : CodeActionKind.t option
+    ; title : string
     }
 
   val create :
-       title:string
-    -> ?kind:CodeActionKind.t
+       ?command:Command.t
+    -> ?data:Json.t
     -> ?diagnostics:Diagnostic.t list
-    -> ?isPreferred:bool
     -> ?disabled:disabled
     -> ?edit:WorkspaceEdit.t
-    -> ?command:Command.t
-    -> ?data:Json.t
+    -> ?isPreferred:bool
+    -> ?kind:CodeActionKind.t
+    -> title:string
     -> unit
     -> t
 
@@ -1606,25 +1868,30 @@ module CodeActionContext : sig
   type t =
     { diagnostics : Diagnostic.t list
     ; only : CodeActionKind.t list option
+    ; triggerKind : CodeActionTriggerKind.t option
     }
 
   val create :
-    diagnostics:Diagnostic.t list -> ?only:CodeActionKind.t list -> unit -> t
+       diagnostics:Diagnostic.t list
+    -> ?only:CodeActionKind.t list
+    -> ?triggerKind:CodeActionTriggerKind.t
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CodeActionOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; codeActionKinds : CodeActionKind.t list option
+    { codeActionKinds : CodeActionKind.t list option
     ; resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
-       ?workDoneProgress:bool
-    -> ?codeActionKinds:CodeActionKind.t list
+       ?codeActionKinds:CodeActionKind.t list
     -> ?resolveProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -1633,19 +1900,19 @@ end
 
 module CodeActionParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { context : CodeActionContext.t
     ; partialResultToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
     ; range : Range.t
-    ; context : CodeActionContext.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       context:CodeActionContext.t
     -> ?partialResultToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
     -> range:Range.t
-    -> context:CodeActionContext.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -1654,17 +1921,17 @@ end
 
 module CodeActionRegistrationOptions : sig
   type t =
-    { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
-    ; codeActionKinds : CodeActionKind.t list option
+    { codeActionKinds : CodeActionKind.t list option
+    ; documentSelector : DocumentSelector.t option
     ; resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
-       ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
-    -> ?codeActionKinds:CodeActionKind.t list
+       ?codeActionKinds:CodeActionKind.t list
+    -> ?documentSelector:DocumentSelector.t
     -> ?resolveProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -1673,38 +1940,38 @@ end
 
 module CodeLens : sig
   type t =
-    { range : Range.t
-    ; command : Command.t option
+    { command : Command.t option
     ; data : Json.t option
+    ; range : Range.t
     }
 
-  val create : range:Range.t -> ?command:Command.t -> ?data:Json.t -> unit -> t
+  val create : ?command:Command.t -> ?data:Json.t -> range:Range.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CodeLensOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; resolveProvider : bool option
+    { resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
-  val create : ?workDoneProgress:bool -> ?resolveProvider:bool -> unit -> t
+  val create : ?resolveProvider:bool -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CodeLensParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -1714,62 +1981,55 @@ end
 module CodeLensRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?resolveProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module Decimal : sig
-  type t = int
-
-  include Json.Jsonable.S with type t := t
-end
-
 module Color : sig
   type t =
-    { red : Decimal.t
-    ; green : Decimal.t
-    ; blue : Decimal.t
-    ; alpha : Decimal.t
+    { alpha : int
+    ; blue : int
+    ; green : int
+    ; red : int
     }
 
-  val create :
-    red:Decimal.t -> green:Decimal.t -> blue:Decimal.t -> alpha:Decimal.t -> t
+  val create : alpha:int -> blue:int -> green:int -> red:int -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ColorInformation : sig
   type t =
-    { range : Range.t
-    ; color : Color.t
+    { color : Color.t
+    ; range : Range.t
     }
 
-  val create : range:Range.t -> color:Color.t -> t
+  val create : color:Color.t -> range:Range.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ColorPresentation : sig
   type t =
-    { label : string
+    { additionalTextEdits : TextEdit.t list option
+    ; label : string
     ; textEdit : TextEdit.t option
-    ; additionalTextEdits : TextEdit.t list option
     }
 
   val create :
-       label:string
+       ?additionalTextEdits:TextEdit.t list
+    -> label:string
     -> ?textEdit:TextEdit.t
-    -> ?additionalTextEdits:TextEdit.t list
     -> unit
     -> t
 
@@ -1778,19 +2038,19 @@ end
 
 module ColorPresentationParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { color : Color.t
     ; partialResultToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
-    ; color : Color.t
     ; range : Range.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       color:Color.t
     -> ?partialResultToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
-    -> color:Color.t
     -> range:Range.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -1799,24 +2059,35 @@ end
 
 module CompletionContext : sig
   type t =
-    { triggerKind : CompletionTriggerKind.t
-    ; triggerCharacter : string option
+    { triggerCharacter : string option
+    ; triggerKind : CompletionTriggerKind.t
     }
 
   val create :
-    triggerKind:CompletionTriggerKind.t -> ?triggerCharacter:string -> unit -> t
+    ?triggerCharacter:string -> triggerKind:CompletionTriggerKind.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module InsertReplaceEdit : sig
   type t =
-    { newText : string
-    ; insert : Range.t
+    { insert : Range.t
+    ; newText : string
     ; replace : Range.t
     }
 
-  val create : newText:string -> insert:Range.t -> replace:Range.t -> t
+  val create : insert:Range.t -> newText:string -> replace:Range.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module CompletionItemLabelDetails : sig
+  type t =
+    { description : string option
+    ; detail : string option
+    }
+
+  val create : ?description:string -> ?detail:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1834,47 +2105,51 @@ end
 
 module CompletionItem : sig
   type t =
-    { label : string
-    ; kind : CompletionItemKind.t option
-    ; tags : CompletionItemTag.t list option
+    { additionalTextEdits : TextEdit.t list option
+    ; command : Command.t option
+    ; commitCharacters : string list option
+    ; data : Json.t option
+    ; deprecated : bool option
     ; detail : string option
     ; documentation :
         [ `String of string | `MarkupContent of MarkupContent.t ] option
-    ; deprecated : bool option
-    ; preselect : bool option
-    ; sortText : string option
     ; filterText : string option
     ; insertText : string option
     ; insertTextFormat : InsertTextFormat.t option
     ; insertTextMode : InsertTextMode.t option
+    ; kind : CompletionItemKind.t option
+    ; label : string
+    ; labelDetails : CompletionItemLabelDetails.t option
+    ; preselect : bool option
+    ; sortText : string option
+    ; tags : CompletionItemTag.t list option
     ; textEdit :
         [ `TextEdit of TextEdit.t | `InsertReplaceEdit of InsertReplaceEdit.t ]
         option
-    ; additionalTextEdits : TextEdit.t list option
-    ; commitCharacters : string list option
-    ; command : Command.t option
-    ; data : Json.t option
+    ; textEditText : string option
     }
 
   val create :
-       label:string
-    -> ?kind:CompletionItemKind.t
-    -> ?tags:CompletionItemTag.t list
+       ?additionalTextEdits:TextEdit.t list
+    -> ?command:Command.t
+    -> ?commitCharacters:string list
+    -> ?data:Json.t
+    -> ?deprecated:bool
     -> ?detail:string
     -> ?documentation:[ `String of string | `MarkupContent of MarkupContent.t ]
-    -> ?deprecated:bool
-    -> ?preselect:bool
-    -> ?sortText:string
     -> ?filterText:string
     -> ?insertText:string
     -> ?insertTextFormat:InsertTextFormat.t
     -> ?insertTextMode:InsertTextMode.t
+    -> ?kind:CompletionItemKind.t
+    -> label:string
+    -> ?labelDetails:CompletionItemLabelDetails.t
+    -> ?preselect:bool
+    -> ?sortText:string
+    -> ?tags:CompletionItemTag.t list
     -> ?textEdit:
          [ `TextEdit of TextEdit.t | `InsertReplaceEdit of InsertReplaceEdit.t ]
-    -> ?additionalTextEdits:TextEdit.t list
-    -> ?commitCharacters:string list
-    -> ?command:Command.t
-    -> ?data:Json.t
+    -> ?textEditText:string
     -> unit
     -> t
 
@@ -1882,29 +2157,66 @@ module CompletionItem : sig
 end
 
 module CompletionList : sig
+  type editRange =
+    { insert : Range.t
+    ; replace : Range.t
+    }
+
+  val create_editRange : insert:Range.t -> replace:Range.t -> editRange
+
+  type itemDefaults =
+    { commitCharacters : string list option
+    ; editRange : [ `Range of Range.t | `EditRange of editRange ] option
+    ; insertTextFormat : InsertTextFormat.t option
+    ; insertTextMode : InsertTextMode.t option
+    ; data : Json.t option
+    }
+
+  val create_itemDefaults :
+       ?commitCharacters:string list
+    -> ?editRange:[ `Range of Range.t | `EditRange of editRange ]
+    -> ?insertTextFormat:InsertTextFormat.t
+    -> ?insertTextMode:InsertTextMode.t
+    -> ?data:Json.t
+    -> unit
+    -> itemDefaults
+
   type t =
     { isIncomplete : bool
+    ; itemDefaults : itemDefaults option
     ; items : CompletionItem.t list
     }
 
-  val create : isIncomplete:bool -> items:CompletionItem.t list -> t
+  val create :
+       isIncomplete:bool
+    -> ?itemDefaults:itemDefaults
+    -> items:CompletionItem.t list
+    -> unit
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module CompletionOptions : sig
+  type completionItem = { labelDetailsSupport : bool option }
+
+  val create_completionItem :
+    ?labelDetailsSupport:bool -> unit -> completionItem
+
   type t =
-    { workDoneProgress : bool option
-    ; triggerCharacters : string list option
-    ; allCommitCharacters : string list option
+    { allCommitCharacters : string list option
+    ; completionItem : completionItem option
     ; resolveProvider : bool option
+    ; triggerCharacters : string list option
+    ; workDoneProgress : bool option
     }
 
   val create :
-       ?workDoneProgress:bool
-    -> ?triggerCharacters:string list
-    -> ?allCommitCharacters:string list
+       ?allCommitCharacters:string list
+    -> ?completionItem:completionItem
     -> ?resolveProvider:bool
+    -> ?triggerCharacters:string list
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -1913,19 +2225,19 @@ end
 
 module CompletionParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
-    ; workDoneToken : ProgressToken.t option
+    { context : CompletionContext.t option
     ; partialResultToken : ProgressToken.t option
-    ; context : CompletionContext.t option
+    ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> position:Position.t
-    -> ?workDoneToken:ProgressToken.t
+       ?context:CompletionContext.t
     -> ?partialResultToken:ProgressToken.t
-    -> ?context:CompletionContext.t
+    -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -1933,20 +2245,27 @@ module CompletionParams : sig
 end
 
 module CompletionRegistrationOptions : sig
+  type completionItem = { labelDetailsSupport : bool option }
+
+  val create_completionItem :
+    ?labelDetailsSupport:bool -> unit -> completionItem
+
   type t =
-    { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
-    ; triggerCharacters : string list option
-    ; allCommitCharacters : string list option
+    { allCommitCharacters : string list option
+    ; completionItem : completionItem option
+    ; documentSelector : DocumentSelector.t option
     ; resolveProvider : bool option
+    ; triggerCharacters : string list option
+    ; workDoneProgress : bool option
     }
 
   val create :
-       ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
-    -> ?triggerCharacters:string list
-    -> ?allCommitCharacters:string list
+       ?allCommitCharacters:string list
+    -> ?completionItem:completionItem
+    -> ?documentSelector:DocumentSelector.t
     -> ?resolveProvider:bool
+    -> ?triggerCharacters:string list
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -1955,11 +2274,11 @@ end
 
 module ConfigurationItem : sig
   type t =
-    { scopeUri : DocumentUri.t option
+    { scopeUri : string option
     ; section : string option
     }
 
-  val create : ?scopeUri:DocumentUri.t -> ?section:string -> unit -> t
+  val create : ?scopeUri:string -> ?section:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -1988,6 +2307,40 @@ module CreateFilesParams : sig
   include Json.Jsonable.S with type t := t
 end
 
+module Declaration : sig
+  type t =
+    [ `Location of Location.t
+    | `List of Location.t list
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module LocationLink : sig
+  type t =
+    { originSelectionRange : Range.t option
+    ; targetRange : Range.t
+    ; targetSelectionRange : Range.t
+    ; targetUri : DocumentUri.t
+    }
+
+  val create :
+       ?originSelectionRange:Range.t
+    -> targetRange:Range.t
+    -> targetSelectionRange:Range.t
+    -> targetUri:DocumentUri.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DeclarationLink : sig
+  type t = LocationLink.t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DeclarationOptions : sig
   type t = { workDoneProgress : bool option }
 
@@ -1998,17 +2351,17 @@ end
 
 module DeclarationParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2017,17 +2370,32 @@ end
 
 module DeclarationRegistrationOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; documentSelector : DocumentSelector.t option
+    { documentSelector : DocumentSelector.t option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
-       ?workDoneProgress:bool
-    -> ?documentSelector:DocumentSelector.t
+       ?documentSelector:DocumentSelector.t
     -> ?id:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module Definition : sig
+  type t =
+    [ `Location of Location.t
+    | `List of Location.t list
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DefinitionLink : sig
+  type t = LocationLink.t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2042,17 +2410,17 @@ end
 
 module DefinitionParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2087,10 +2455,80 @@ module DeleteFilesParams : sig
   include Json.Jsonable.S with type t := t
 end
 
+module DiagnosticOptions : sig
+  type t =
+    { identifier : string option
+    ; interFileDependencies : bool
+    ; workDoneProgress : bool option
+    ; workspaceDiagnostics : bool
+    }
+
+  val create :
+       ?identifier:string
+    -> interFileDependencies:bool
+    -> ?workDoneProgress:bool
+    -> workspaceDiagnostics:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DiagnosticRegistrationOptions : sig
+  type t =
+    { documentSelector : DocumentSelector.t option
+    ; id : string option
+    ; identifier : string option
+    ; interFileDependencies : bool
+    ; workDoneProgress : bool option
+    ; workspaceDiagnostics : bool
+    }
+
+  val create :
+       ?documentSelector:DocumentSelector.t
+    -> ?id:string
+    -> ?identifier:string
+    -> interFileDependencies:bool
+    -> ?workDoneProgress:bool
+    -> workspaceDiagnostics:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DiagnosticServerCancellationData : sig
+  type t = { retriggerRequest : bool }
+
+  val create : retriggerRequest:bool -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DidChangeConfigurationParams : sig
   type t = { settings : Json.t }
 
   val create : settings:Json.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidChangeConfigurationRegistrationOptions : sig
+  type t = { section : [ `String of string | `List of string list ] option }
+
+  val create :
+    ?section:[ `String of string | `List of string list ] -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module VersionedNotebookDocumentIdentifier : sig
+  type t =
+    { uri : DocumentUri.t
+    ; version : int
+    }
+
+  val create : uri:DocumentUri.t -> version:int -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2110,23 +2548,141 @@ end
 module VersionedTextDocumentIdentifier : sig
   type t =
     { uri : DocumentUri.t
-    ; version : Integer.t
+    ; version : int
     }
 
-  val create : uri:DocumentUri.t -> version:Integer.t -> t
+  val create : uri:DocumentUri.t -> version:int -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module ExecutionSummary : sig
+  type t =
+    { executionOrder : int
+    ; success : bool option
+    }
+
+  val create : executionOrder:int -> ?success:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookCell : sig
+  type t =
+    { document : DocumentUri.t
+    ; executionSummary : ExecutionSummary.t option
+    ; kind : NotebookCellKind.t
+    ; metadata : Json.Object.t option
+    }
+
+  val create :
+       document:DocumentUri.t
+    -> ?executionSummary:ExecutionSummary.t
+    -> kind:NotebookCellKind.t
+    -> ?metadata:Json.Object.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextDocumentItem : sig
+  type t =
+    { languageId : string
+    ; text : string
+    ; uri : DocumentUri.t
+    ; version : int
+    }
+
+  val create :
+    languageId:string -> text:string -> uri:DocumentUri.t -> version:int -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookCellArrayChange : sig
+  type t =
+    { cells : NotebookCell.t list option
+    ; deleteCount : int
+    ; start : int
+    }
+
+  val create :
+    ?cells:NotebookCell.t list -> deleteCount:int -> start:int -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module NotebookDocumentChangeEvent : sig
+  type textContent =
+    { document : VersionedTextDocumentIdentifier.t
+    ; changes : TextDocumentContentChangeEvent.t list
+    }
+
+  val create_textContent :
+       document:VersionedTextDocumentIdentifier.t
+    -> changes:TextDocumentContentChangeEvent.t list
+    -> textContent
+
+  type structure =
+    { array : NotebookCellArrayChange.t
+    ; didOpen : TextDocumentItem.t list option
+    ; didClose : TextDocumentIdentifier.t list option
+    }
+
+  val create_structure :
+       array:NotebookCellArrayChange.t
+    -> ?didOpen:TextDocumentItem.t list
+    -> ?didClose:TextDocumentIdentifier.t list
+    -> unit
+    -> structure
+
+  type cells =
+    { structure : structure option
+    ; data : NotebookCell.t list option
+    ; textContent : textContent list option
+    }
+
+  val create_cells :
+       ?structure:structure
+    -> ?data:NotebookCell.t list
+    -> ?textContent:textContent list
+    -> unit
+    -> cells
+
+  type t =
+    { cells : cells option
+    ; metadata : Json.Object.t option
+    }
+
+  val create : ?cells:cells -> ?metadata:Json.Object.t -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidChangeNotebookDocumentParams : sig
+  type t =
+    { change : NotebookDocumentChangeEvent.t
+    ; notebookDocument : VersionedNotebookDocumentIdentifier.t
+    }
+
+  val create :
+       change:NotebookDocumentChangeEvent.t
+    -> notebookDocument:VersionedNotebookDocumentIdentifier.t
+    -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DidChangeTextDocumentParams : sig
   type t =
-    { textDocument : VersionedTextDocumentIdentifier.t
-    ; contentChanges : TextDocumentContentChangeEvent.t list
+    { contentChanges : TextDocumentContentChangeEvent.t list
+    ; textDocument : VersionedTextDocumentIdentifier.t
     }
 
   val create :
-       textDocument:VersionedTextDocumentIdentifier.t
-    -> contentChanges:TextDocumentContentChangeEvent.t list
+       contentChanges:TextDocumentContentChangeEvent.t list
+    -> textDocument:VersionedTextDocumentIdentifier.t
     -> t
 
   include Json.Jsonable.S with type t := t
@@ -2134,11 +2690,11 @@ end
 
 module FileEvent : sig
   type t =
-    { uri : DocumentUri.t
-    ; type_ : int
+    { type_ : FileChangeType.t
+    ; uri : DocumentUri.t
     }
 
-  val create : uri:DocumentUri.t -> type_:int -> t
+  val create : type_:FileChangeType.t -> uri:DocumentUri.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2151,13 +2707,54 @@ module DidChangeWatchedFilesParams : sig
   include Json.Jsonable.S with type t := t
 end
 
-module FileSystemWatcher : sig
+module Pattern : sig
+  type t = string
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceFolder : sig
   type t =
-    { globPattern : string
-    ; kind : int option
+    { name : string
+    ; uri : DocumentUri.t
     }
 
-  val create : globPattern:string -> ?kind:int -> unit -> t
+  val create : name:string -> uri:DocumentUri.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module RelativePattern : sig
+  type t =
+    { baseUri :
+        [ `WorkspaceFolder of WorkspaceFolder.t | `URI of DocumentUri.t ]
+    ; pattern : Pattern.t
+    }
+
+  val create :
+       baseUri:[ `WorkspaceFolder of WorkspaceFolder.t | `URI of DocumentUri.t ]
+    -> pattern:Pattern.t
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module GlobPattern : sig
+  type t =
+    [ `Pattern of Pattern.t
+    | `RelativePattern of RelativePattern.t
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module FileSystemWatcher : sig
+  type t =
+    { globPattern : GlobPattern.t
+    ; kind : WatchKind.t option
+    }
+
+  val create : globPattern:GlobPattern.t -> ?kind:WatchKind.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2166,17 +2763,6 @@ module DidChangeWatchedFilesRegistrationOptions : sig
   type t = { watchers : FileSystemWatcher.t list }
 
   val create : watchers:FileSystemWatcher.t list -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module WorkspaceFolder : sig
-  type t =
-    { uri : DocumentUri.t
-    ; name : string
-    }
-
-  val create : uri:DocumentUri.t -> name:string -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2201,6 +2787,28 @@ module DidChangeWorkspaceFoldersParams : sig
   include Json.Jsonable.S with type t := t
 end
 
+module NotebookDocumentIdentifier : sig
+  type t = { uri : DocumentUri.t }
+
+  val create : uri:DocumentUri.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidCloseNotebookDocumentParams : sig
+  type t =
+    { cellTextDocuments : TextDocumentIdentifier.t list
+    ; notebookDocument : NotebookDocumentIdentifier.t
+    }
+
+  val create :
+       cellTextDocuments:TextDocumentIdentifier.t list
+    -> notebookDocument:NotebookDocumentIdentifier.t
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DidCloseTextDocumentParams : sig
   type t = { textDocument : TextDocumentIdentifier.t }
 
@@ -2209,19 +2817,36 @@ module DidCloseTextDocumentParams : sig
   include Json.Jsonable.S with type t := t
 end
 
-module TextDocumentItem : sig
+module NotebookDocument : sig
   type t =
-    { uri : DocumentUri.t
-    ; languageId : string
-    ; version : Integer.t
-    ; text : string
+    { cells : NotebookCell.t list
+    ; metadata : Json.Object.t option
+    ; notebookType : string
+    ; uri : DocumentUri.t
+    ; version : int
     }
 
   val create :
-       uri:DocumentUri.t
-    -> languageId:string
-    -> version:Integer.t
-    -> text:string
+       cells:NotebookCell.t list
+    -> ?metadata:Json.Object.t
+    -> notebookType:string
+    -> uri:DocumentUri.t
+    -> version:int
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DidOpenNotebookDocumentParams : sig
+  type t =
+    { cellTextDocuments : TextDocumentItem.t list
+    ; notebookDocument : NotebookDocument.t
+    }
+
+  val create :
+       cellTextDocuments:TextDocumentItem.t list
+    -> notebookDocument:NotebookDocument.t
     -> t
 
   include Json.Jsonable.S with type t := t
@@ -2235,14 +2860,22 @@ module DidOpenTextDocumentParams : sig
   include Json.Jsonable.S with type t := t
 end
 
+module DidSaveNotebookDocumentParams : sig
+  type t = { notebookDocument : NotebookDocumentIdentifier.t }
+
+  val create : notebookDocument:NotebookDocumentIdentifier.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DidSaveTextDocumentParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; text : string option
+    { text : string option
+    ; textDocument : TextDocumentIdentifier.t
     }
 
   val create :
-    textDocument:TextDocumentIdentifier.t -> ?text:string -> unit -> t
+    ?text:string -> textDocument:TextDocumentIdentifier.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2257,15 +2890,15 @@ end
 
 module DocumentColorParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2289,6 +2922,139 @@ module DocumentColorRegistrationOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
+module DocumentDiagnosticParams : sig
+  type t =
+    { identifier : string option
+    ; partialResultToken : ProgressToken.t option
+    ; previousResultId : string option
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       ?identifier:string
+    -> ?partialResultToken:ProgressToken.t
+    -> ?previousResultId:string
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module UnchangedDocumentDiagnosticReport : sig
+  type t = { resultId : string }
+
+  val create : resultId:string -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module FullDocumentDiagnosticReport : sig
+  type t =
+    { items : Diagnostic.t list
+    ; resultId : string option
+    }
+
+  val create : items:Diagnostic.t list -> ?resultId:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module RelatedUnchangedDocumentDiagnosticReport : sig
+  type t =
+    { relatedDocuments :
+        ( DocumentUri.t
+        , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+          | `UnchangedDocumentDiagnosticReport of
+            UnchangedDocumentDiagnosticReport.t
+          ] )
+        Json.Assoc.t
+        option
+    ; resultId : string
+    }
+
+  val create :
+       ?relatedDocuments:
+         ( DocumentUri.t
+         , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+           | `UnchangedDocumentDiagnosticReport of
+             UnchangedDocumentDiagnosticReport.t
+           ] )
+         Json.Assoc.t
+    -> resultId:string
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module RelatedFullDocumentDiagnosticReport : sig
+  type t =
+    { items : Diagnostic.t list
+    ; relatedDocuments :
+        ( DocumentUri.t
+        , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+          | `UnchangedDocumentDiagnosticReport of
+            UnchangedDocumentDiagnosticReport.t
+          ] )
+        Json.Assoc.t
+        option
+    ; resultId : string option
+    }
+
+  val create :
+       items:Diagnostic.t list
+    -> ?relatedDocuments:
+         ( DocumentUri.t
+         , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+           | `UnchangedDocumentDiagnosticReport of
+             UnchangedDocumentDiagnosticReport.t
+           ] )
+         Json.Assoc.t
+    -> ?resultId:string
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DocumentDiagnosticReport : sig
+  type t =
+    [ `RelatedFullDocumentDiagnosticReport of
+      RelatedFullDocumentDiagnosticReport.t
+    | `RelatedUnchangedDocumentDiagnosticReport of
+      RelatedUnchangedDocumentDiagnosticReport.t
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module DocumentDiagnosticReportPartialResult : sig
+  type t =
+    { relatedDocuments :
+        ( DocumentUri.t
+        , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+          | `UnchangedDocumentDiagnosticReport of
+            UnchangedDocumentDiagnosticReport.t
+          ] )
+        Json.Assoc.t
+    }
+
+  val create :
+       relatedDocuments:
+         ( DocumentUri.t
+         , [ `FullDocumentDiagnosticReport of FullDocumentDiagnosticReport.t
+           | `UnchangedDocumentDiagnosticReport of
+             UnchangedDocumentDiagnosticReport.t
+           ] )
+         Json.Assoc.t
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module DocumentFormattingOptions : sig
   type t = { workDoneProgress : bool option }
 
@@ -2299,19 +3065,19 @@ end
 
 module FormattingOptions : sig
   type t =
-    { tabSize : int
+    { insertFinalNewline : bool option
     ; insertSpaces : bool
-    ; trimTrailingWhitespace : bool option
-    ; insertFinalNewline : bool option
+    ; tabSize : int
     ; trimFinalNewlines : bool option
+    ; trimTrailingWhitespace : bool option
     }
 
   val create :
-       tabSize:int
+       ?insertFinalNewline:bool
     -> insertSpaces:bool
-    -> ?trimTrailingWhitespace:bool
-    -> ?insertFinalNewline:bool
+    -> tabSize:int
     -> ?trimFinalNewlines:bool
+    -> ?trimTrailingWhitespace:bool
     -> unit
     -> t
 
@@ -2320,15 +3086,15 @@ end
 
 module DocumentFormattingParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { options : FormattingOptions.t
     ; textDocument : TextDocumentIdentifier.t
-    ; options : FormattingOptions.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       options:FormattingOptions.t
     -> textDocument:TextDocumentIdentifier.t
-    -> options:FormattingOptions.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2349,11 +3115,11 @@ end
 
 module DocumentHighlight : sig
   type t =
-    { range : Range.t
-    ; kind : DocumentHighlightKind.t option
+    { kind : DocumentHighlightKind.t option
+    ; range : Range.t
     }
 
-  val create : range:Range.t -> ?kind:DocumentHighlightKind.t -> unit -> t
+  val create : ?kind:DocumentHighlightKind.t -> range:Range.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2368,17 +3134,17 @@ end
 
 module DocumentHighlightParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2399,17 +3165,17 @@ end
 
 module DocumentLink : sig
   type t =
-    { range : Range.t
-    ; target : DocumentUri.t option
+    { data : Json.t option
+    ; range : Range.t
+    ; target : string option
     ; tooltip : string option
-    ; data : Json.t option
     }
 
   val create :
-       range:Range.t
-    -> ?target:DocumentUri.t
+       ?data:Json.t
+    -> range:Range.t
+    -> ?target:string
     -> ?tooltip:string
-    -> ?data:Json.t
     -> unit
     -> t
 
@@ -2418,26 +3184,26 @@ end
 
 module DocumentLinkOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; resolveProvider : bool option
+    { resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
-  val create : ?workDoneProgress:bool -> ?resolveProvider:bool -> unit -> t
+  val create : ?resolveProvider:bool -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DocumentLinkParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2447,14 +3213,14 @@ end
 module DocumentLinkRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?resolveProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -2478,17 +3244,17 @@ end
 
 module DocumentOnTypeFormattingParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
-    ; ch : string
+    { ch : string
     ; options : FormattingOptions.t
+    ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> position:Position.t
-    -> ch:string
+       ch:string
     -> options:FormattingOptions.t
+    -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> t
 
   include Json.Jsonable.S with type t := t
@@ -2521,17 +3287,17 @@ end
 
 module DocumentRangeFormattingParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
+    { options : FormattingOptions.t
     ; range : Range.t
-    ; options : FormattingOptions.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
+       options:FormattingOptions.t
     -> range:Range.t
-    -> options:FormattingOptions.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2552,25 +3318,25 @@ end
 
 module DocumentSymbol : sig
   type t =
-    { name : string
+    { children : t list option
+    ; deprecated : bool option
     ; detail : string option
     ; kind : SymbolKind.t
-    ; tags : SymbolTag.t list option
-    ; deprecated : bool option
+    ; name : string
     ; range : Range.t
     ; selectionRange : Range.t
-    ; children : t list option
+    ; tags : SymbolTag.t list option
     }
 
   val create :
-       name:string
+       ?children:t list
+    -> ?deprecated:bool
     -> ?detail:string
     -> kind:SymbolKind.t
-    -> ?tags:SymbolTag.t list
-    -> ?deprecated:bool
+    -> name:string
     -> range:Range.t
     -> selectionRange:Range.t
-    -> ?children:t list
+    -> ?tags:SymbolTag.t list
     -> unit
     -> t
 
@@ -2579,26 +3345,26 @@ end
 
 module DocumentSymbolOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; label : string option
+    { label : string option
+    ; workDoneProgress : bool option
     }
 
-  val create : ?workDoneProgress:bool -> ?label:string -> unit -> t
+  val create : ?label:string -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module DocumentSymbolParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2608,14 +3374,14 @@ end
 module DocumentSymbolRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; label : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?label:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -2624,26 +3390,26 @@ end
 
 module ExecuteCommandOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; commands : string list
+    { commands : string list
+    ; workDoneProgress : bool option
     }
 
-  val create : ?workDoneProgress:bool -> commands:string list -> unit -> t
+  val create : commands:string list -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ExecuteCommandParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { arguments : Json.t list option
     ; command : string
-    ; arguments : Json.t list option
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       ?arguments:Json.t list
     -> command:string
-    -> ?arguments:Json.t list
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2652,11 +3418,11 @@ end
 
 module ExecuteCommandRegistrationOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; commands : string list
+    { commands : string list
+    ; workDoneProgress : bool option
     }
 
-  val create : ?workDoneProgress:bool -> commands:string list -> unit -> t
+  val create : commands:string list -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2688,11 +3454,11 @@ end
 
 module FileOperationFilter : sig
   type t =
-    { scheme : string option
-    ; pattern : FileOperationPattern.t
+    { pattern : FileOperationPattern.t
+    ; scheme : string option
     }
 
-  val create : ?scheme:string -> pattern:FileOperationPattern.t -> unit -> t
+  val create : pattern:FileOperationPattern.t -> ?scheme:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2705,32 +3471,57 @@ module FileOperationRegistrationOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
-module FileRename : sig
+module FileOperationOptions : sig
   type t =
-    { oldUri : string
-    ; newUri : string
+    { didCreate : FileOperationRegistrationOptions.t option
+    ; didDelete : FileOperationRegistrationOptions.t option
+    ; didRename : FileOperationRegistrationOptions.t option
+    ; willCreate : FileOperationRegistrationOptions.t option
+    ; willDelete : FileOperationRegistrationOptions.t option
+    ; willRename : FileOperationRegistrationOptions.t option
     }
 
-  val create : oldUri:string -> newUri:string -> t
+  val create :
+       ?didCreate:FileOperationRegistrationOptions.t
+    -> ?didDelete:FileOperationRegistrationOptions.t
+    -> ?didRename:FileOperationRegistrationOptions.t
+    -> ?willCreate:FileOperationRegistrationOptions.t
+    -> ?willDelete:FileOperationRegistrationOptions.t
+    -> ?willRename:FileOperationRegistrationOptions.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module FileRename : sig
+  type t =
+    { newUri : string
+    ; oldUri : string
+    }
+
+  val create : newUri:string -> oldUri:string -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module FoldingRange : sig
   type t =
-    { startLine : int
-    ; startCharacter : int option
-    ; endLine : int
+    { collapsedText : string option
     ; endCharacter : int option
+    ; endLine : int
     ; kind : FoldingRangeKind.t option
+    ; startCharacter : int option
+    ; startLine : int
     }
 
   val create :
-       startLine:int
-    -> ?startCharacter:int
-    -> endLine:int
+       ?collapsedText:string
     -> ?endCharacter:int
+    -> endLine:int
     -> ?kind:FoldingRangeKind.t
+    -> ?startCharacter:int
+    -> startLine:int
     -> unit
     -> t
 
@@ -2747,15 +3538,15 @@ end
 
 module FoldingRangeParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2765,14 +3556,14 @@ end
 module FoldingRangeRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?id:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -2782,18 +3573,18 @@ end
 module Hover : sig
   type t =
     { contents :
-        [ `MarkedString of MarkedString.t
+        [ `MarkupContent of MarkupContent.t
+        | `MarkedString of MarkedString.t
         | `List of MarkedString.t list
-        | `MarkupContent of MarkupContent.t
         ]
     ; range : Range.t option
     }
 
   val create :
        contents:
-         [ `MarkedString of MarkedString.t
+         [ `MarkupContent of MarkupContent.t
+         | `MarkedString of MarkedString.t
          | `List of MarkedString.t list
-         | `MarkupContent of MarkupContent.t
          ]
     -> ?range:Range.t
     -> unit
@@ -2812,14 +3603,14 @@ end
 
 module HoverParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> position:Position.t
+       position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
@@ -2849,17 +3640,17 @@ end
 
 module ImplementationParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
     -> unit
     -> t
 
@@ -2869,26 +3660,24 @@ end
 module ImplementationRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?id:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module TraceValue : sig
-  type t =
-    [ `Off
-    | `Messages
-    | `Verbose
-    ]
+module InitializeError : sig
+  type t = { retry : bool }
+
+  val create : retry:bool -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -2902,28 +3691,28 @@ module InitializeParams : sig
   val create_clientInfo : name:string -> ?version:string -> unit -> clientInfo
 
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; processId : Integer.t option
+    { capabilities : ClientCapabilities.t
     ; clientInfo : clientInfo option
+    ; initializationOptions : Json.t option
     ; locale : string option
+    ; processId : int option
     ; rootPath : string option option
     ; rootUri : DocumentUri.t option
-    ; initializationOptions : Json.t option
-    ; capabilities : ClientCapabilities.t
-    ; trace : TraceValue.t option
+    ; trace : TraceValues.t option
+    ; workDoneToken : ProgressToken.t option
     ; workspaceFolders : WorkspaceFolder.t list option option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?processId:Integer.t
+       capabilities:ClientCapabilities.t
     -> ?clientInfo:clientInfo
+    -> ?initializationOptions:Json.t
     -> ?locale:string
+    -> ?processId:int
     -> ?rootPath:string option
     -> ?rootUri:DocumentUri.t
-    -> ?initializationOptions:Json.t
-    -> capabilities:ClientCapabilities.t
-    -> ?trace:TraceValue.t
+    -> ?trace:TraceValues.t
+    -> ?workDoneToken:ProgressToken.t
     -> ?workspaceFolders:WorkspaceFolder.t list option
     -> unit
     -> t
@@ -2931,22 +3720,50 @@ module InitializeParams : sig
   include Json.Jsonable.S with type t := t
 end
 
+module WorkspaceSymbolOptions : sig
+  type t =
+    { resolveProvider : bool option
+    ; workDoneProgress : bool option
+    }
+
+  val create : ?resolveProvider:bool -> ?workDoneProgress:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module WorkspaceFoldersServerCapabilities : sig
   type t =
-    { supported : bool option
-    ; changeNotifications : [ `String of string | `Bool of bool ] option
+    { changeNotifications : [ `String of string | `Bool of bool ] option
+    ; supported : bool option
     }
 
   val create :
-       ?supported:bool
-    -> ?changeNotifications:[ `String of string | `Bool of bool ]
+       ?changeNotifications:[ `String of string | `Bool of bool ]
+    -> ?supported:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module WorkspaceSymbolOptions : sig
+module TypeHierarchyRegistrationOptions : sig
+  type t =
+    { documentSelector : DocumentSelector.t option
+    ; id : string option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?documentSelector:DocumentSelector.t
+    -> ?id:string
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchyOptions : sig
   type t = { workDoneProgress : bool option }
 
   val create : ?workDoneProgress:bool -> unit -> t
@@ -2954,7 +3771,175 @@ module WorkspaceSymbolOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
-module MonikerOptions : sig
+module TypeDefinitionRegistrationOptions : sig
+  type t =
+    { documentSelector : DocumentSelector.t option
+    ; id : string option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?documentSelector:DocumentSelector.t
+    -> ?id:string
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeDefinitionOptions : sig
+  type t = { workDoneProgress : bool option }
+
+  val create : ?workDoneProgress:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SaveOptions : sig
+  type t = { includeText : bool option }
+
+  val create : ?includeText:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextDocumentSyncOptions : sig
+  type t =
+    { change : TextDocumentSyncKind.t option
+    ; openClose : bool option
+    ; save : [ `Bool of bool | `SaveOptions of SaveOptions.t ] option
+    ; willSave : bool option
+    ; willSaveWaitUntil : bool option
+    }
+
+  val create :
+       ?change:TextDocumentSyncKind.t
+    -> ?openClose:bool
+    -> ?save:[ `Bool of bool | `SaveOptions of SaveOptions.t ]
+    -> ?willSave:bool
+    -> ?willSaveWaitUntil:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SignatureHelpOptions : sig
+  type t =
+    { retriggerCharacters : string list option
+    ; triggerCharacters : string list option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?retriggerCharacters:string list
+    -> ?triggerCharacters:string list
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SemanticTokensLegend : sig
+  type t =
+    { tokenModifiers : string list
+    ; tokenTypes : string list
+    }
+
+  val create : tokenModifiers:string list -> tokenTypes:string list -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SemanticTokensRegistrationOptions : sig
+  type full = { delta : bool option }
+
+  val create_full : ?delta:bool -> unit -> full
+
+  type t =
+    { documentSelector : DocumentSelector.t option
+    ; full : [ `Bool of bool | `Full of full ] option
+    ; id : string option
+    ; legend : SemanticTokensLegend.t
+    ; range : bool option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?documentSelector:DocumentSelector.t
+    -> ?full:[ `Bool of bool | `Full of full ]
+    -> ?id:string
+    -> legend:SemanticTokensLegend.t
+    -> ?range:bool
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SemanticTokensOptions : sig
+  type full = { delta : bool option }
+
+  val create_full : ?delta:bool -> unit -> full
+
+  type t =
+    { full : [ `Bool of bool | `Full of full ] option
+    ; legend : SemanticTokensLegend.t
+    ; range : bool option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?full:[ `Bool of bool | `Full of full ]
+    -> legend:SemanticTokensLegend.t
+    -> ?range:bool
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SelectionRangeRegistrationOptions : sig
+  type t =
+    { documentSelector : DocumentSelector.t option
+    ; id : string option
+    ; workDoneProgress : bool option
+    }
+
+  val create :
+       ?documentSelector:DocumentSelector.t
+    -> ?id:string
+    -> ?workDoneProgress:bool
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SelectionRangeOptions : sig
+  type t = { workDoneProgress : bool option }
+
+  val create : ?workDoneProgress:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module RenameOptions : sig
+  type t =
+    { prepareProvider : bool option
+    ; workDoneProgress : bool option
+    }
+
+  val create : ?prepareProvider:bool -> ?workDoneProgress:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module ReferenceOptions : sig
   type t = { workDoneProgress : bool option }
 
   val create : ?workDoneProgress:bool -> unit -> t
@@ -2974,61 +3959,25 @@ module MonikerRegistrationOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
-module SemanticTokensLegend : sig
-  type t =
-    { tokenTypes : string list
-    ; tokenModifiers : string list
-    }
+module MonikerOptions : sig
+  type t = { workDoneProgress : bool option }
 
-  val create : tokenTypes:string list -> tokenModifiers:string list -> t
+  val create : ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module SemanticTokensOptions : sig
-  type full = { delta : bool option }
-
-  val create_full : ?delta:bool -> unit -> full
-
-  type t =
-    { workDoneProgress : bool option
-    ; legend : SemanticTokensLegend.t
-    ; range : bool option
-    ; full : [ `Bool of bool | `Full of full ] option
-    }
-
-  val create :
-       ?workDoneProgress:bool
-    -> legend:SemanticTokensLegend.t
-    -> ?range:bool
-    -> ?full:[ `Bool of bool | `Full of full ]
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module SemanticTokensRegistrationOptions : sig
-  type full = { delta : bool option }
-
-  val create_full : ?delta:bool -> unit -> full
-
+module LinkedEditingRangeRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
-    ; legend : SemanticTokensLegend.t
-    ; range : bool option
-    ; full : [ `Bool of bool | `Full of full ] option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
-    -> legend:SemanticTokensLegend.t
-    -> ?range:bool
-    -> ?full:[ `Bool of bool | `Full of full ]
     -> ?id:string
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
@@ -3043,24 +3992,24 @@ module LinkedEditingRangeOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
-module LinkedEditingRangeRegistrationOptions : sig
+module InlineValueRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; id : string option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
+    -> ?id:string
     -> ?workDoneProgress:bool
-    -> ?id:string
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module SelectionRangeOptions : sig
+module InlineValueOptions : sig
   type t = { workDoneProgress : bool option }
 
   val create : ?workDoneProgress:bool -> unit -> t
@@ -3068,153 +4017,67 @@ module SelectionRangeOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
-module SelectionRangeRegistrationOptions : sig
-  type t =
-    { workDoneProgress : bool option
-    ; documentSelector : DocumentSelector.t option
-    ; id : string option
-    }
-
-  val create :
-       ?workDoneProgress:bool
-    -> ?documentSelector:DocumentSelector.t
-    -> ?id:string
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module RenameOptions : sig
-  type t =
-    { workDoneProgress : bool option
-    ; prepareProvider : bool option
-    }
-
-  val create : ?workDoneProgress:bool -> ?prepareProvider:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module ReferenceOptions : sig
-  type t = { workDoneProgress : bool option }
-
-  val create : ?workDoneProgress:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TypeDefinitionOptions : sig
-  type t = { workDoneProgress : bool option }
-
-  val create : ?workDoneProgress:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TypeDefinitionRegistrationOptions : sig
+module InlayHintRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; id : string option
+    ; resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?id:string
+    -> ?resolveProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module SignatureHelpOptions : sig
+module InlayHintOptions : sig
   type t =
-    { workDoneProgress : bool option
-    ; triggerCharacters : string list option
-    ; retriggerCharacters : string list option
+    { resolveProvider : bool option
+    ; workDoneProgress : bool option
     }
 
-  val create :
-       ?workDoneProgress:bool
-    -> ?triggerCharacters:string list
-    -> ?retriggerCharacters:string list
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module SaveOptions : sig
-  type t = { includeText : bool option }
-
-  val create : ?includeText:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module TextDocumentSyncOptions : sig
-  type t =
-    { openClose : bool option
-    ; change : TextDocumentSyncKind.t option
-    ; willSave : bool option
-    ; willSaveWaitUntil : bool option
-    ; save : [ `Bool of bool | `SaveOptions of SaveOptions.t ] option
-    }
-
-  val create :
-       ?openClose:bool
-    -> ?change:TextDocumentSyncKind.t
-    -> ?willSave:bool
-    -> ?willSaveWaitUntil:bool
-    -> ?save:[ `Bool of bool | `SaveOptions of SaveOptions.t ]
-    -> unit
-    -> t
+  val create : ?resolveProvider:bool -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ServerCapabilities : sig
-  type fileOperations =
-    { didCreate : FileOperationRegistrationOptions.t option
-    ; willCreate : FileOperationRegistrationOptions.t option
-    ; didRename : FileOperationRegistrationOptions.t option
-    ; willRename : FileOperationRegistrationOptions.t option
-    ; didDelete : FileOperationRegistrationOptions.t option
-    ; willDelete : FileOperationRegistrationOptions.t option
-    }
-
-  val create_fileOperations :
-       ?didCreate:FileOperationRegistrationOptions.t
-    -> ?willCreate:FileOperationRegistrationOptions.t
-    -> ?didRename:FileOperationRegistrationOptions.t
-    -> ?willRename:FileOperationRegistrationOptions.t
-    -> ?didDelete:FileOperationRegistrationOptions.t
-    -> ?willDelete:FileOperationRegistrationOptions.t
-    -> unit
-    -> fileOperations
-
   type workspace =
     { workspaceFolders : WorkspaceFoldersServerCapabilities.t option
-    ; fileOperations : fileOperations option
+    ; fileOperations : FileOperationOptions.t option
     }
 
   val create_workspace :
        ?workspaceFolders:WorkspaceFoldersServerCapabilities.t
-    -> ?fileOperations:fileOperations
+    -> ?fileOperations:FileOperationOptions.t
     -> unit
     -> workspace
 
   type t =
-    { textDocumentSync :
-        [ `TextDocumentSyncOptions of TextDocumentSyncOptions.t
-        | `TextDocumentSyncKind of TextDocumentSyncKind.t
+    { callHierarchyProvider :
+        [ `Bool of bool
+        | `CallHierarchyOptions of CallHierarchyOptions.t
+        | `CallHierarchyRegistrationOptions of
+          CallHierarchyRegistrationOptions.t
+        ]
+        option
+    ; codeActionProvider :
+        [ `Bool of bool | `CodeActionOptions of CodeActionOptions.t ] option
+    ; codeLensProvider : CodeLensOptions.t option
+    ; colorProvider :
+        [ `Bool of bool
+        | `DocumentColorOptions of DocumentColorOptions.t
+        | `DocumentColorRegistrationOptions of
+          DocumentColorRegistrationOptions.t
         ]
         option
     ; completionProvider : CompletionOptions.t option
-    ; hoverProvider : [ `Bool of bool | `HoverOptions of HoverOptions.t ] option
-    ; signatureHelpProvider : SignatureHelpOptions.t option
     ; declarationProvider :
         [ `Bool of bool
         | `DeclarationOptions of DeclarationOptions.t
@@ -3223,39 +4086,9 @@ module ServerCapabilities : sig
         option
     ; definitionProvider :
         [ `Bool of bool | `DefinitionOptions of DefinitionOptions.t ] option
-    ; typeDefinitionProvider :
-        [ `Bool of bool
-        | `TypeDefinitionOptions of TypeDefinitionOptions.t
-        | `TypeDefinitionRegistrationOptions of
-          TypeDefinitionRegistrationOptions.t
-        ]
-        option
-    ; implementationProvider :
-        [ `Bool of bool
-        | `ImplementationOptions of ImplementationOptions.t
-        | `ImplementationRegistrationOptions of
-          ImplementationRegistrationOptions.t
-        ]
-        option
-    ; referencesProvider :
-        [ `Bool of bool | `ReferenceOptions of ReferenceOptions.t ] option
-    ; documentHighlightProvider :
-        [ `Bool of bool
-        | `DocumentHighlightOptions of DocumentHighlightOptions.t
-        ]
-        option
-    ; documentSymbolProvider :
-        [ `Bool of bool | `DocumentSymbolOptions of DocumentSymbolOptions.t ]
-        option
-    ; codeActionProvider :
-        [ `Bool of bool | `CodeActionOptions of CodeActionOptions.t ] option
-    ; codeLensProvider : CodeLensOptions.t option
-    ; documentLinkProvider : DocumentLinkOptions.t option
-    ; colorProvider :
-        [ `Bool of bool
-        | `DocumentColorOptions of DocumentColorOptions.t
-        | `DocumentColorRegistrationOptions of
-          DocumentColorRegistrationOptions.t
+    ; diagnosticProvider :
+        [ `DiagnosticOptions of DiagnosticOptions.t
+        | `DiagnosticRegistrationOptions of DiagnosticRegistrationOptions.t
         ]
         option
     ; documentFormattingProvider :
@@ -3263,27 +4096,48 @@ module ServerCapabilities : sig
         | `DocumentFormattingOptions of DocumentFormattingOptions.t
         ]
         option
+    ; documentHighlightProvider :
+        [ `Bool of bool
+        | `DocumentHighlightOptions of DocumentHighlightOptions.t
+        ]
+        option
+    ; documentLinkProvider : DocumentLinkOptions.t option
+    ; documentOnTypeFormattingProvider :
+        DocumentOnTypeFormattingOptions.t option
     ; documentRangeFormattingProvider :
         [ `Bool of bool
         | `DocumentRangeFormattingOptions of DocumentRangeFormattingOptions.t
         ]
         option
-    ; documentOnTypeFormattingProvider :
-        DocumentOnTypeFormattingOptions.t option
-    ; renameProvider :
-        [ `Bool of bool | `RenameOptions of RenameOptions.t ] option
+    ; documentSymbolProvider :
+        [ `Bool of bool | `DocumentSymbolOptions of DocumentSymbolOptions.t ]
+        option
+    ; executeCommandProvider : ExecuteCommandOptions.t option
+    ; experimental : Json.t option
     ; foldingRangeProvider :
         [ `Bool of bool
         | `FoldingRangeOptions of FoldingRangeOptions.t
         | `FoldingRangeRegistrationOptions of FoldingRangeRegistrationOptions.t
         ]
         option
-    ; executeCommandProvider : ExecuteCommandOptions.t option
-    ; selectionRangeProvider :
+    ; hoverProvider : [ `Bool of bool | `HoverOptions of HoverOptions.t ] option
+    ; implementationProvider :
         [ `Bool of bool
-        | `SelectionRangeOptions of SelectionRangeOptions.t
-        | `SelectionRangeRegistrationOptions of
-          SelectionRangeRegistrationOptions.t
+        | `ImplementationOptions of ImplementationOptions.t
+        | `ImplementationRegistrationOptions of
+          ImplementationRegistrationOptions.t
+        ]
+        option
+    ; inlayHintProvider :
+        [ `Bool of bool
+        | `InlayHintOptions of InlayHintOptions.t
+        | `InlayHintRegistrationOptions of InlayHintRegistrationOptions.t
+        ]
+        option
+    ; inlineValueProvider :
+        [ `Bool of bool
+        | `InlineValueOptions of InlineValueOptions.t
+        | `InlineValueRegistrationOptions of InlineValueRegistrationOptions.t
         ]
         option
     ; linkedEditingRangeProvider :
@@ -3293,11 +4147,28 @@ module ServerCapabilities : sig
           LinkedEditingRangeRegistrationOptions.t
         ]
         option
-    ; callHierarchyProvider :
+    ; monikerProvider :
         [ `Bool of bool
-        | `CallHierarchyOptions of CallHierarchyOptions.t
-        | `CallHierarchyRegistrationOptions of
-          CallHierarchyRegistrationOptions.t
+        | `MonikerOptions of MonikerOptions.t
+        | `MonikerRegistrationOptions of MonikerRegistrationOptions.t
+        ]
+        option
+    ; notebookDocumentSync :
+        [ `NotebookDocumentSyncOptions of NotebookDocumentSyncOptions.t
+        | `NotebookDocumentSyncRegistrationOptions of
+          NotebookDocumentSyncRegistrationOptions.t
+        ]
+        option
+    ; positionEncoding : PositionEncodingKind.t option
+    ; referencesProvider :
+        [ `Bool of bool | `ReferenceOptions of ReferenceOptions.t ] option
+    ; renameProvider :
+        [ `Bool of bool | `RenameOptions of RenameOptions.t ] option
+    ; selectionRangeProvider :
+        [ `Bool of bool
+        | `SelectionRangeOptions of SelectionRangeOptions.t
+        | `SelectionRangeRegistrationOptions of
+          SelectionRangeRegistrationOptions.t
         ]
         option
     ; semanticTokensProvider :
@@ -3306,27 +4177,49 @@ module ServerCapabilities : sig
           SemanticTokensRegistrationOptions.t
         ]
         option
-    ; monikerProvider :
-        [ `Bool of bool
-        | `MonikerOptions of MonikerOptions.t
-        | `MonikerRegistrationOptions of MonikerRegistrationOptions.t
+    ; signatureHelpProvider : SignatureHelpOptions.t option
+    ; textDocumentSync :
+        [ `TextDocumentSyncOptions of TextDocumentSyncOptions.t
+        | `TextDocumentSyncKind of TextDocumentSyncKind.t
         ]
         option
+    ; typeDefinitionProvider :
+        [ `Bool of bool
+        | `TypeDefinitionOptions of TypeDefinitionOptions.t
+        | `TypeDefinitionRegistrationOptions of
+          TypeDefinitionRegistrationOptions.t
+        ]
+        option
+    ; typeHierarchyProvider :
+        [ `Bool of bool
+        | `TypeHierarchyOptions of TypeHierarchyOptions.t
+        | `TypeHierarchyRegistrationOptions of
+          TypeHierarchyRegistrationOptions.t
+        ]
+        option
+    ; workspace : workspace option
     ; workspaceSymbolProvider :
         [ `Bool of bool | `WorkspaceSymbolOptions of WorkspaceSymbolOptions.t ]
         option
-    ; workspace : workspace option
-    ; experimental : Json.t option
     }
 
   val create :
-       ?textDocumentSync:
-         [ `TextDocumentSyncOptions of TextDocumentSyncOptions.t
-         | `TextDocumentSyncKind of TextDocumentSyncKind.t
+       ?callHierarchyProvider:
+         [ `Bool of bool
+         | `CallHierarchyOptions of CallHierarchyOptions.t
+         | `CallHierarchyRegistrationOptions of
+           CallHierarchyRegistrationOptions.t
+         ]
+    -> ?codeActionProvider:
+         [ `Bool of bool | `CodeActionOptions of CodeActionOptions.t ]
+    -> ?codeLensProvider:CodeLensOptions.t
+    -> ?colorProvider:
+         [ `Bool of bool
+         | `DocumentColorOptions of DocumentColorOptions.t
+         | `DocumentColorRegistrationOptions of
+           DocumentColorRegistrationOptions.t
          ]
     -> ?completionProvider:CompletionOptions.t
-    -> ?hoverProvider:[ `Bool of bool | `HoverOptions of HoverOptions.t ]
-    -> ?signatureHelpProvider:SignatureHelpOptions.t
     -> ?declarationProvider:
          [ `Bool of bool
          | `DeclarationOptions of DeclarationOptions.t
@@ -3334,57 +4227,49 @@ module ServerCapabilities : sig
          ]
     -> ?definitionProvider:
          [ `Bool of bool | `DefinitionOptions of DefinitionOptions.t ]
-    -> ?typeDefinitionProvider:
-         [ `Bool of bool
-         | `TypeDefinitionOptions of TypeDefinitionOptions.t
-         | `TypeDefinitionRegistrationOptions of
-           TypeDefinitionRegistrationOptions.t
+    -> ?diagnosticProvider:
+         [ `DiagnosticOptions of DiagnosticOptions.t
+         | `DiagnosticRegistrationOptions of DiagnosticRegistrationOptions.t
          ]
+    -> ?documentFormattingProvider:
+         [ `Bool of bool
+         | `DocumentFormattingOptions of DocumentFormattingOptions.t
+         ]
+    -> ?documentHighlightProvider:
+         [ `Bool of bool
+         | `DocumentHighlightOptions of DocumentHighlightOptions.t
+         ]
+    -> ?documentLinkProvider:DocumentLinkOptions.t
+    -> ?documentOnTypeFormattingProvider:DocumentOnTypeFormattingOptions.t
+    -> ?documentRangeFormattingProvider:
+         [ `Bool of bool
+         | `DocumentRangeFormattingOptions of DocumentRangeFormattingOptions.t
+         ]
+    -> ?documentSymbolProvider:
+         [ `Bool of bool | `DocumentSymbolOptions of DocumentSymbolOptions.t ]
+    -> ?executeCommandProvider:ExecuteCommandOptions.t
+    -> ?experimental:Json.t
+    -> ?foldingRangeProvider:
+         [ `Bool of bool
+         | `FoldingRangeOptions of FoldingRangeOptions.t
+         | `FoldingRangeRegistrationOptions of FoldingRangeRegistrationOptions.t
+         ]
+    -> ?hoverProvider:[ `Bool of bool | `HoverOptions of HoverOptions.t ]
     -> ?implementationProvider:
          [ `Bool of bool
          | `ImplementationOptions of ImplementationOptions.t
          | `ImplementationRegistrationOptions of
            ImplementationRegistrationOptions.t
          ]
-    -> ?referencesProvider:
-         [ `Bool of bool | `ReferenceOptions of ReferenceOptions.t ]
-    -> ?documentHighlightProvider:
+    -> ?inlayHintProvider:
          [ `Bool of bool
-         | `DocumentHighlightOptions of DocumentHighlightOptions.t
+         | `InlayHintOptions of InlayHintOptions.t
+         | `InlayHintRegistrationOptions of InlayHintRegistrationOptions.t
          ]
-    -> ?documentSymbolProvider:
-         [ `Bool of bool | `DocumentSymbolOptions of DocumentSymbolOptions.t ]
-    -> ?codeActionProvider:
-         [ `Bool of bool | `CodeActionOptions of CodeActionOptions.t ]
-    -> ?codeLensProvider:CodeLensOptions.t
-    -> ?documentLinkProvider:DocumentLinkOptions.t
-    -> ?colorProvider:
+    -> ?inlineValueProvider:
          [ `Bool of bool
-         | `DocumentColorOptions of DocumentColorOptions.t
-         | `DocumentColorRegistrationOptions of
-           DocumentColorRegistrationOptions.t
-         ]
-    -> ?documentFormattingProvider:
-         [ `Bool of bool
-         | `DocumentFormattingOptions of DocumentFormattingOptions.t
-         ]
-    -> ?documentRangeFormattingProvider:
-         [ `Bool of bool
-         | `DocumentRangeFormattingOptions of DocumentRangeFormattingOptions.t
-         ]
-    -> ?documentOnTypeFormattingProvider:DocumentOnTypeFormattingOptions.t
-    -> ?renameProvider:[ `Bool of bool | `RenameOptions of RenameOptions.t ]
-    -> ?foldingRangeProvider:
-         [ `Bool of bool
-         | `FoldingRangeOptions of FoldingRangeOptions.t
-         | `FoldingRangeRegistrationOptions of FoldingRangeRegistrationOptions.t
-         ]
-    -> ?executeCommandProvider:ExecuteCommandOptions.t
-    -> ?selectionRangeProvider:
-         [ `Bool of bool
-         | `SelectionRangeOptions of SelectionRangeOptions.t
-         | `SelectionRangeRegistrationOptions of
-           SelectionRangeRegistrationOptions.t
+         | `InlineValueOptions of InlineValueOptions.t
+         | `InlineValueRegistrationOptions of InlineValueRegistrationOptions.t
          ]
     -> ?linkedEditingRangeProvider:
          [ `Bool of bool
@@ -3392,26 +4277,51 @@ module ServerCapabilities : sig
          | `LinkedEditingRangeRegistrationOptions of
            LinkedEditingRangeRegistrationOptions.t
          ]
-    -> ?callHierarchyProvider:
+    -> ?monikerProvider:
          [ `Bool of bool
-         | `CallHierarchyOptions of CallHierarchyOptions.t
-         | `CallHierarchyRegistrationOptions of
-           CallHierarchyRegistrationOptions.t
+         | `MonikerOptions of MonikerOptions.t
+         | `MonikerRegistrationOptions of MonikerRegistrationOptions.t
+         ]
+    -> ?notebookDocumentSync:
+         [ `NotebookDocumentSyncOptions of NotebookDocumentSyncOptions.t
+         | `NotebookDocumentSyncRegistrationOptions of
+           NotebookDocumentSyncRegistrationOptions.t
+         ]
+    -> ?positionEncoding:PositionEncodingKind.t
+    -> ?referencesProvider:
+         [ `Bool of bool | `ReferenceOptions of ReferenceOptions.t ]
+    -> ?renameProvider:[ `Bool of bool | `RenameOptions of RenameOptions.t ]
+    -> ?selectionRangeProvider:
+         [ `Bool of bool
+         | `SelectionRangeOptions of SelectionRangeOptions.t
+         | `SelectionRangeRegistrationOptions of
+           SelectionRangeRegistrationOptions.t
          ]
     -> ?semanticTokensProvider:
          [ `SemanticTokensOptions of SemanticTokensOptions.t
          | `SemanticTokensRegistrationOptions of
            SemanticTokensRegistrationOptions.t
          ]
-    -> ?monikerProvider:
-         [ `Bool of bool
-         | `MonikerOptions of MonikerOptions.t
-         | `MonikerRegistrationOptions of MonikerRegistrationOptions.t
+    -> ?signatureHelpProvider:SignatureHelpOptions.t
+    -> ?textDocumentSync:
+         [ `TextDocumentSyncOptions of TextDocumentSyncOptions.t
+         | `TextDocumentSyncKind of TextDocumentSyncKind.t
          ]
+    -> ?typeDefinitionProvider:
+         [ `Bool of bool
+         | `TypeDefinitionOptions of TypeDefinitionOptions.t
+         | `TypeDefinitionRegistrationOptions of
+           TypeDefinitionRegistrationOptions.t
+         ]
+    -> ?typeHierarchyProvider:
+         [ `Bool of bool
+         | `TypeHierarchyOptions of TypeHierarchyOptions.t
+         | `TypeHierarchyRegistrationOptions of
+           TypeHierarchyRegistrationOptions.t
+         ]
+    -> ?workspace:workspace
     -> ?workspaceSymbolProvider:
          [ `Bool of bool | `WorkspaceSymbolOptions of WorkspaceSymbolOptions.t ]
-    -> ?workspace:workspace
-    -> ?experimental:Json.t
     -> unit
     -> t
 
@@ -3437,16 +4347,194 @@ module InitializeResult : sig
   include Json.Jsonable.S with type t := t
 end
 
-module LinkedEditingRangeParams : sig
+module InitializedParams_ : sig
+  type clientInfo =
+    { name : string
+    ; version : string option
+    }
+
+  val create_clientInfo : name:string -> ?version:string -> unit -> clientInfo
+
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
+    { capabilities : ClientCapabilities.t
+    ; clientInfo : clientInfo option
+    ; initializationOptions : Json.t option
+    ; locale : string option
+    ; processId : int option
+    ; rootPath : string option option
+    ; rootUri : DocumentUri.t option
+    ; trace : TraceValues.t option
     ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       capabilities:ClientCapabilities.t
+    -> ?clientInfo:clientInfo
+    -> ?initializationOptions:Json.t
+    -> ?locale:string
+    -> ?processId:int
+    -> ?rootPath:string option
+    -> ?rootUri:DocumentUri.t
+    -> ?trace:TraceValues.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHintLabelPart : sig
+  type t =
+    { command : Command.t option
+    ; location : Location.t option
+    ; tooltip : [ `String of string | `MarkupContent of MarkupContent.t ] option
+    ; value : string
+    }
+
+  val create :
+       ?command:Command.t
+    -> ?location:Location.t
+    -> ?tooltip:[ `String of string | `MarkupContent of MarkupContent.t ]
+    -> value:string
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHint : sig
+  type t =
+    { data : Json.t option
+    ; kind : InlayHintKind.t option
+    ; label : [ `String of string | `List of InlayHintLabelPart.t list ]
+    ; paddingLeft : bool option
+    ; paddingRight : bool option
+    ; position : Position.t
+    ; textEdits : TextEdit.t list option
+    ; tooltip : [ `String of string | `MarkupContent of MarkupContent.t ] option
+    }
+
+  val create :
+       ?data:Json.t
+    -> ?kind:InlayHintKind.t
+    -> label:[ `String of string | `List of InlayHintLabelPart.t list ]
+    -> ?paddingLeft:bool
+    -> ?paddingRight:bool
     -> position:Position.t
+    -> ?textEdits:TextEdit.t list
+    -> ?tooltip:[ `String of string | `MarkupContent of MarkupContent.t ]
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlayHintParams : sig
+  type t =
+    { range : Range.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       range:Range.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueEvaluatableExpression : sig
+  type t =
+    { expression : string option
+    ; range : Range.t
+    }
+
+  val create : ?expression:string -> range:Range.t -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueVariableLookup : sig
+  type t =
+    { caseSensitiveLookup : bool
+    ; range : Range.t
+    ; variableName : string option
+    }
+
+  val create :
+       caseSensitiveLookup:bool
+    -> range:Range.t
+    -> ?variableName:string
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueText : sig
+  type t =
+    { range : Range.t
+    ; text : string
+    }
+
+  val create : range:Range.t -> text:string -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValue : sig
+  type t =
+    [ `InlineValueText of InlineValueText.t
+    | `InlineValueVariableLookup of InlineValueVariableLookup.t
+    | `InlineValueEvaluatableExpression of InlineValueEvaluatableExpression.t
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueContext : sig
+  type t =
+    { frameId : int
+    ; stoppedLocation : Range.t
+    }
+
+  val create : frameId:int -> stoppedLocation:Range.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module InlineValueParams : sig
+  type t =
+    { context : InlineValueContext.t
+    ; range : Range.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       context:InlineValueContext.t
+    -> range:Range.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module LinkedEditingRangeParams : sig
+  type t =
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
@@ -3465,32 +4553,13 @@ module LinkedEditingRanges : sig
   include Json.Jsonable.S with type t := t
 end
 
-module LocationLink : sig
-  type t =
-    { originSelectionRange : Range.t option
-    ; targetUri : DocumentUri.t
-    ; targetRange : Range.t
-    ; targetSelectionRange : Range.t
-    }
-
-  val create :
-       ?originSelectionRange:Range.t
-    -> targetUri:DocumentUri.t
-    -> targetRange:Range.t
-    -> targetSelectionRange:Range.t
-    -> unit
-    -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
 module LogMessageParams : sig
   type t =
-    { type_ : MessageType.t
-    ; message : string
+    { message : string
+    ; type_ : MessageType.t
     }
 
-  val create : type_:MessageType.t -> message:string -> t
+  val create : message:string -> type_:MessageType.t -> t
 
   include Json.Jsonable.S with type t := t
 end
@@ -3516,17 +4585,17 @@ end
 
 module Moniker : sig
   type t =
-    { scheme : string
-    ; identifier : string
-    ; unique : UniquenessLevel.t
+    { identifier : string
     ; kind : MonikerKind.t option
+    ; scheme : string
+    ; unique : UniquenessLevel.t
     }
 
   val create :
-       scheme:string
-    -> identifier:string
-    -> unique:UniquenessLevel.t
+       identifier:string
     -> ?kind:MonikerKind.t
+    -> scheme:string
+    -> unique:UniquenessLevel.t
     -> unit
     -> t
 
@@ -3535,17 +4604,17 @@ end
 
 module MonikerParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3554,42 +4623,67 @@ end
 
 module ParameterInformation : sig
   type t =
-    { label : [ `String of string | `Offset of int * int ]
-    ; documentation :
+    { documentation :
         [ `String of string | `MarkupContent of MarkupContent.t ] option
+    ; label : [ `String of string | `Offset of int * int ]
     }
 
   val create :
-       label:[ `String of string | `Offset of int * int ]
-    -> ?documentation:[ `String of string | `MarkupContent of MarkupContent.t ]
+       ?documentation:[ `String of string | `MarkupContent of MarkupContent.t ]
+    -> label:[ `String of string | `Offset of int * int ]
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
+module PartialResultParams : sig
+  type t = { partialResultToken : ProgressToken.t option }
+
+  val create : ?partialResultToken:ProgressToken.t -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module PrepareRenameParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
-  val create : textDocument:TextDocumentIdentifier.t -> position:Position.t -> t
+  val create :
+       position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module PreviousResultId : sig
+  type t =
+    { uri : DocumentUri.t
+    ; value : string
+    }
+
+  val create : uri:DocumentUri.t -> value:string -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module PublishDiagnosticsParams : sig
   type t =
-    { uri : DocumentUri.t
+    { diagnostics : Diagnostic.t list
+    ; uri : DocumentUri.t
     ; version : int option
-    ; diagnostics : Diagnostic.t list
     }
 
   val create :
-       uri:DocumentUri.t
+       diagnostics:Diagnostic.t list
+    -> uri:DocumentUri.t
     -> ?version:int
-    -> diagnostics:Diagnostic.t list
     -> unit
     -> t
 
@@ -3606,19 +4700,19 @@ end
 
 module ReferenceParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; position : Position.t
-    ; workDoneToken : ProgressToken.t option
+    { context : ReferenceContext.t
     ; partialResultToken : ProgressToken.t option
-    ; context : ReferenceContext.t
+    ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> position:Position.t
-    -> ?workDoneToken:ProgressToken.t
+       context:ReferenceContext.t
     -> ?partialResultToken:ProgressToken.t
-    -> context:ReferenceContext.t
+    -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3668,17 +4762,17 @@ end
 
 module RenameParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { newName : string
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; newName : string
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       newName:string
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> newName:string
     -> unit
     -> t
 
@@ -3688,44 +4782,56 @@ end
 module RenameRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
     ; prepareProvider : bool option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
     -> ?prepareProvider:bool
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
-module SelectionRange : sig
+module ResourceOperation : sig
   type t =
-    { range : Range.t
-    ; parent : t option
+    { annotationId : ChangeAnnotationIdentifier.t option
+    ; kind : string
     }
 
-  val create : range:Range.t -> ?parent:t -> unit -> t
+  val create :
+    ?annotationId:ChangeAnnotationIdentifier.t -> kind:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module SelectionRange : sig
+  type t =
+    { parent : t option
+    ; range : Range.t
+    }
+
+  val create : ?parent:t -> range:Range.t -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module SelectionRangeParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; positions : Position.t list
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> positions:Position.t list
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3734,51 +4840,51 @@ end
 
 module SemanticTokens : sig
   type t =
-    { resultId : string option
-    ; data : int list
+    { data : int array
+    ; resultId : string option
     }
 
-  val create : ?resultId:string -> data:int list -> unit -> t
+  val create : data:int array -> ?resultId:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module SemanticTokensEdit : sig
   type t =
-    { start : int
+    { data : int array option
     ; deleteCount : int
-    ; data : int list option
+    ; start : int
     }
 
-  val create : start:int -> deleteCount:int -> ?data:int list -> unit -> t
+  val create : ?data:int array -> deleteCount:int -> start:int -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module SemanticTokensDelta : sig
   type t =
-    { resultId : string option
-    ; edits : SemanticTokensEdit.t list
+    { edits : SemanticTokensEdit.t list
+    ; resultId : string option
     }
 
-  val create : ?resultId:string -> edits:SemanticTokensEdit.t list -> unit -> t
+  val create : edits:SemanticTokensEdit.t list -> ?resultId:string -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module SemanticTokensDeltaParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; previousResultId : string
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> previousResultId:string
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3795,15 +4901,15 @@ end
 
 module SemanticTokensParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
+    { partialResultToken : ProgressToken.t option
     ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
+       ?partialResultToken:ProgressToken.t
     -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3811,26 +4917,26 @@ module SemanticTokensParams : sig
 end
 
 module SemanticTokensPartialResult : sig
-  type t = { data : int list }
+  type t = { data : int array }
 
-  val create : data:int list -> t
+  val create : data:int array -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module SemanticTokensRangeParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
-    ; textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; range : Range.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
-    -> ?partialResultToken:ProgressToken.t
-    -> textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> range:Range.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -3838,26 +4944,26 @@ module SemanticTokensRangeParams : sig
 end
 
 module SetTraceParams : sig
-  type t = { value : TraceValue.t }
+  type t = { value : TraceValues.t }
 
-  val create : value:TraceValue.t -> t
+  val create : value:TraceValues.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ShowDocumentParams : sig
   type t =
-    { uri : URI.t
-    ; external_ : bool option
-    ; takeFocus : bool option
+    { external_ : bool option
     ; selection : Range.t option
+    ; takeFocus : bool option
+    ; uri : DocumentUri.t
     }
 
   val create :
-       uri:URI.t
-    -> ?external_:bool
-    -> ?takeFocus:bool
+       ?external_:bool
     -> ?selection:Range.t
+    -> ?takeFocus:bool
+    -> uri:DocumentUri.t
     -> unit
     -> t
 
@@ -3874,26 +4980,26 @@ end
 
 module ShowMessageParams : sig
   type t =
-    { type_ : MessageType.t
-    ; message : string
+    { message : string
+    ; type_ : MessageType.t
     }
 
-  val create : type_:MessageType.t -> message:string -> t
+  val create : message:string -> type_:MessageType.t -> t
 
   include Json.Jsonable.S with type t := t
 end
 
 module ShowMessageRequestParams : sig
   type t =
-    { type_ : MessageType.t
+    { actions : MessageActionItem.t list option
     ; message : string
-    ; actions : MessageActionItem.t list option
+    ; type_ : MessageType.t
     }
 
   val create :
-       type_:MessageType.t
+       ?actions:MessageActionItem.t list
     -> message:string
-    -> ?actions:MessageActionItem.t list
+    -> type_:MessageType.t
     -> unit
     -> t
 
@@ -3902,18 +5008,18 @@ end
 
 module SignatureInformation : sig
   type t =
-    { label : string
+    { activeParameter : int option
     ; documentation :
         [ `String of string | `MarkupContent of MarkupContent.t ] option
+    ; label : string
     ; parameters : ParameterInformation.t list option
-    ; activeParameter : int option
     }
 
   val create :
-       label:string
+       ?activeParameter:int
     -> ?documentation:[ `String of string | `MarkupContent of MarkupContent.t ]
+    -> label:string
     -> ?parameters:ParameterInformation.t list
-    -> ?activeParameter:int
     -> unit
     -> t
 
@@ -3922,15 +5028,15 @@ end
 
 module SignatureHelp : sig
   type t =
-    { signatures : SignatureInformation.t list
+    { activeParameter : int option
     ; activeSignature : int option
-    ; activeParameter : int option
+    ; signatures : SignatureInformation.t list
     }
 
   val create :
-       signatures:SignatureInformation.t list
+       ?activeParameter:int
     -> ?activeSignature:int
-    -> ?activeParameter:int
+    -> signatures:SignatureInformation.t list
     -> unit
     -> t
 
@@ -3939,17 +5045,17 @@ end
 
 module SignatureHelpContext : sig
   type t =
-    { triggerKind : SignatureHelpTriggerKind.t
-    ; triggerCharacter : string option
+    { activeSignatureHelp : SignatureHelp.t option
     ; isRetrigger : bool
-    ; activeSignatureHelp : SignatureHelp.t option
+    ; triggerCharacter : string option
+    ; triggerKind : SignatureHelpTriggerKind.t
     }
 
   val create :
-       triggerKind:SignatureHelpTriggerKind.t
-    -> ?triggerCharacter:string
+       ?activeSignatureHelp:SignatureHelp.t
     -> isRetrigger:bool
-    -> ?activeSignatureHelp:SignatureHelp.t
+    -> ?triggerCharacter:string
+    -> triggerKind:SignatureHelpTriggerKind.t
     -> unit
     -> t
 
@@ -3958,17 +5064,17 @@ end
 
 module SignatureHelpParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { context : SignatureHelpContext.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; context : SignatureHelpContext.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?context:SignatureHelpContext.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
-    -> ?context:SignatureHelpContext.t
     -> unit
     -> t
 
@@ -3978,41 +5084,55 @@ end
 module SignatureHelpRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
-    ; workDoneProgress : bool option
-    ; triggerCharacters : string list option
     ; retriggerCharacters : string list option
+    ; triggerCharacters : string list option
+    ; workDoneProgress : bool option
     }
 
   val create :
        ?documentSelector:DocumentSelector.t
-    -> ?workDoneProgress:bool
-    -> ?triggerCharacters:string list
     -> ?retriggerCharacters:string list
+    -> ?triggerCharacters:string list
+    -> ?workDoneProgress:bool
     -> unit
     -> t
 
   include Json.Jsonable.S with type t := t
 end
 
+module StaticRegistrationOptions : sig
+  type t = { id : string option }
+
+  val create : ?id:string -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module SymbolInformation : sig
   type t =
-    { name : string
-    ; kind : SymbolKind.t
-    ; tags : SymbolTag.t list option
+    { containerName : string option
     ; deprecated : bool option
+    ; kind : SymbolKind.t
     ; location : Location.t
-    ; containerName : string option
+    ; name : string
+    ; tags : SymbolTag.t list option
     }
 
   val create :
-       name:string
-    -> kind:SymbolKind.t
-    -> ?tags:SymbolTag.t list
+       ?containerName:string
     -> ?deprecated:bool
+    -> kind:SymbolKind.t
     -> location:Location.t
-    -> ?containerName:string
+    -> name:string
+    -> ?tags:SymbolTag.t list
     -> unit
     -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module T : sig
+  type t = Json.Object.t
 
   include Json.Jsonable.S with type t := t
 end
@@ -4032,6 +5152,25 @@ module TextDocumentChangeRegistrationOptions : sig
   include Json.Jsonable.S with type t := t
 end
 
+module TextDocumentPositionParams : sig
+  type t =
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    }
+
+  val create : position:Position.t -> textDocument:TextDocumentIdentifier.t -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TextDocumentRegistrationOptions : sig
+  type t = { documentSelector : DocumentSelector.t option }
+
+  val create : ?documentSelector:DocumentSelector.t -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module TextDocumentSaveRegistrationOptions : sig
   type t =
     { documentSelector : DocumentSelector.t option
@@ -4046,17 +5185,95 @@ end
 
 module TypeDefinitionParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
+    { partialResultToken : ProgressToken.t option
     ; position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
     ; workDoneToken : ProgressToken.t option
-    ; partialResultToken : ProgressToken.t option
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
+       ?partialResultToken:ProgressToken.t
     -> position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
     -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchyItem : sig
+  type t =
+    { data : Json.t option
+    ; detail : string option
+    ; kind : SymbolKind.t
+    ; name : string
+    ; range : Range.t
+    ; selectionRange : Range.t
+    ; tags : SymbolTag.t list option
+    ; uri : DocumentUri.t
+    }
+
+  val create :
+       ?data:Json.t
+    -> ?detail:string
+    -> kind:SymbolKind.t
+    -> name:string
+    -> range:Range.t
+    -> selectionRange:Range.t
+    -> ?tags:SymbolTag.t list
+    -> uri:DocumentUri.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchyPrepareParams : sig
+  type t =
+    { position : Position.t
+    ; textDocument : TextDocumentIdentifier.t
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       position:Position.t
+    -> textDocument:TextDocumentIdentifier.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchySubtypesParams : sig
+  type t =
+    { item : TypeHierarchyItem.t
+    ; partialResultToken : ProgressToken.t option
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       item:TypeHierarchyItem.t
     -> ?partialResultToken:ProgressToken.t
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module TypeHierarchySupertypesParams : sig
+  type t =
+    { item : TypeHierarchyItem.t
+    ; partialResultToken : ProgressToken.t option
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       item:TypeHierarchyItem.t
+    -> ?partialResultToken:ProgressToken.t
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -4084,13 +5301,13 @@ end
 
 module WillSaveTextDocumentParams : sig
   type t =
-    { textDocument : TextDocumentIdentifier.t
-    ; reason : TextDocumentSaveReason.t
+    { reason : TextDocumentSaveReason.t
+    ; textDocument : TextDocumentIdentifier.t
     }
 
   val create :
-       textDocument:TextDocumentIdentifier.t
-    -> reason:TextDocumentSaveReason.t
+       reason:TextDocumentSaveReason.t
+    -> textDocument:TextDocumentIdentifier.t
     -> t
 
   include Json.Jsonable.S with type t := t
@@ -4098,17 +5315,17 @@ end
 
 module WorkDoneProgressBegin : sig
   type t =
-    { title : string
-    ; cancellable : bool option
+    { cancellable : bool option
     ; message : string option
     ; percentage : int option
+    ; title : string
     }
 
   val create :
-       title:string
-    -> ?cancellable:bool
+       ?cancellable:bool
     -> ?message:string
     -> ?percentage:int
+    -> title:string
     -> unit
     -> t
 
@@ -4139,6 +5356,22 @@ module WorkDoneProgressEnd : sig
   include Json.Jsonable.S with type t := t
 end
 
+module WorkDoneProgressOptions : sig
+  type t = { workDoneProgress : bool option }
+
+  val create : ?workDoneProgress:bool -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkDoneProgressParams : sig
+  type t = { workDoneToken : ProgressToken.t option }
+
+  val create : ?workDoneToken:ProgressToken.t -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
 module WorkDoneProgressReport : sig
   type t =
     { cancellable : bool option
@@ -4152,17 +5385,125 @@ module WorkDoneProgressReport : sig
   include Json.Jsonable.S with type t := t
 end
 
-module WorkspaceSymbolParams : sig
+module WorkspaceDiagnosticParams : sig
   type t =
-    { workDoneToken : ProgressToken.t option
+    { identifier : string option
     ; partialResultToken : ProgressToken.t option
-    ; query : string
+    ; previousResultIds : PreviousResultId.t list
+    ; workDoneToken : ProgressToken.t option
     }
 
   val create :
-       ?workDoneToken:ProgressToken.t
+       ?identifier:string
     -> ?partialResultToken:ProgressToken.t
+    -> previousResultIds:PreviousResultId.t list
+    -> ?workDoneToken:ProgressToken.t
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceUnchangedDocumentDiagnosticReport : sig
+  type t =
+    { resultId : string
+    ; uri : DocumentUri.t
+    ; version : int option
+    }
+
+  val create : resultId:string -> uri:DocumentUri.t -> ?version:int -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceFullDocumentDiagnosticReport : sig
+  type t =
+    { items : Diagnostic.t list
+    ; resultId : string option
+    ; uri : DocumentUri.t
+    ; version : int option
+    }
+
+  val create :
+       items:Diagnostic.t list
+    -> ?resultId:string
+    -> uri:DocumentUri.t
+    -> ?version:int
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceDocumentDiagnosticReport : sig
+  type t =
+    [ `WorkspaceFullDocumentDiagnosticReport of
+      WorkspaceFullDocumentDiagnosticReport.t
+    | `WorkspaceUnchangedDocumentDiagnosticReport of
+      WorkspaceUnchangedDocumentDiagnosticReport.t
+    ]
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceDiagnosticReport : sig
+  type t = { items : WorkspaceDocumentDiagnosticReport.t list }
+
+  val create : items:WorkspaceDocumentDiagnosticReport.t list -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceDiagnosticReportPartialResult : sig
+  type t = { items : WorkspaceDocumentDiagnosticReport.t list }
+
+  val create : items:WorkspaceDocumentDiagnosticReport.t list -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceFoldersInitializeParams : sig
+  type t = { workspaceFolders : WorkspaceFolder.t list option option }
+
+  val create : ?workspaceFolders:WorkspaceFolder.t list option -> unit -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceSymbol : sig
+  type t =
+    { containerName : string option
+    ; data : Json.t option
+    ; kind : SymbolKind.t
+    ; location : Location.t
+    ; name : string
+    ; tags : SymbolTag.t list option
+    }
+
+  val create :
+       ?containerName:string
+    -> ?data:Json.t
+    -> kind:SymbolKind.t
+    -> location:Location.t
+    -> name:string
+    -> ?tags:SymbolTag.t list
+    -> unit
+    -> t
+
+  include Json.Jsonable.S with type t := t
+end
+
+module WorkspaceSymbolParams : sig
+  type t =
+    { partialResultToken : ProgressToken.t option
+    ; query : string
+    ; workDoneToken : ProgressToken.t option
+    }
+
+  val create :
+       ?partialResultToken:ProgressToken.t
     -> query:string
+    -> ?workDoneToken:ProgressToken.t
     -> unit
     -> t
 
@@ -4170,15 +5511,12 @@ module WorkspaceSymbolParams : sig
 end
 
 module WorkspaceSymbolRegistrationOptions : sig
-  type t = { workDoneProgress : bool option }
+  type t =
+    { resolveProvider : bool option
+    ; workDoneProgress : bool option
+    }
 
-  val create : ?workDoneProgress:bool -> unit -> t
-
-  include Json.Jsonable.S with type t := t
-end
-
-module Uinteger : sig
-  type t = int
+  val create : ?resolveProvider:bool -> ?workDoneProgress:bool -> unit -> t
 
   include Json.Jsonable.S with type t := t
 end

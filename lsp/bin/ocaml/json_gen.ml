@@ -90,7 +90,8 @@ module Enum = struct
         else clauses
       in
       let msg =
-        sprintf "Invalid value. Expected one of: %s"
+        sprintf
+          "Invalid value. Expected one of: %s"
           (List.map constrs ~f:(fun (_, literal) ->
                Ts_types.Literal.to_maybe_quoted_string literal)
           |> String.concat ~sep:", ")
@@ -141,11 +142,11 @@ module Poly_variant = struct
     { json_constrs; untagged_constrs }
 
   let conv_of_constr target (utc : Ml.Type.constr) =
-    let rec conv (p : Ml.Path.t) =
+    let rec conv (p : Ml.Path.t) : Ml.Path.t =
       match p with
-      | Ident name -> Ml.Path.Ident (Name.conv target name)
-      | Dot (s, name) -> Ml.Path.Dot (s, Name.conv target name)
-      | Apply (s, y) -> Path.Apply (s, conv y)
+      | Ident name -> Ident (Name.conv target name)
+      | Dot (s, name) -> Dot (s, Name.conv target name)
+      | Apply (s, y) -> Apply (s, conv y)
     in
     let conv p = Ml.Path.to_string (conv p) in
     let open Ml.Expr in
@@ -157,10 +158,17 @@ module Poly_variant = struct
     let conv t = Create (Ident (conv t)) in
     match (utc.args : Ml.Type.t list) with
     | [ Path p ] -> conv p
+    | [ List (Prim p) ] ->
+      let ident =
+        match p with
+        | String -> "string"
+        | _ -> assert false
+      in
+      App (Create (json_mod "list"), [ Unnamed (conv (Ident ident)) ])
     | [ List (Path p) ] -> App (Create (json_mod "list"), [ Unnamed (conv p) ])
     | [ Tuple [ Prim Int; Prim Int ] ] -> Create (json_mod "int_pair")
     | [] -> assert false
-    | _ -> Code_error.raise "untagged" [ ("utc.name", Dyn.string utc.name) ]
+    | _ -> Code_error.raise "untagged" [ ("utc", Ml.Type.dyn_of_constr utc) ]
 
   let json_clauses json_constrs =
     List.map json_constrs ~f:(fun (c : Ml.Type.constr) ->

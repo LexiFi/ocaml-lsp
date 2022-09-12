@@ -12,7 +12,8 @@ module Kind = struct
     | ".mli" | ".mfi" | ".eliomi" | ".rei" -> Intf
     | ext ->
       Jsonrpc.Response.Error.raise
-        (Jsonrpc.Response.Error.make ~code:InvalidRequest
+        (Jsonrpc.Response.Error.make
+           ~code:InvalidRequest
            ~message:(Printf.sprintf "unsupported file extension")
            ~data:(`Assoc [ ("extension", `String ext) ])
            ())
@@ -64,7 +65,8 @@ module Syntax = struct
       | Ok x -> x
       | Error ext ->
         Jsonrpc.Response.Error.raise
-          (Jsonrpc.Response.Error.make ~code:InvalidRequest
+          (Jsonrpc.Response.Error.make
+             ~code:InvalidRequest
              ~message:(Printf.sprintf "unsupported file extension")
              ~data:(`Assoc [ ("extension", `String ext) ])
              ())
@@ -125,27 +127,68 @@ let text t = Text_document.text (tdoc t)
 let source t = Msource.make (text t)
 
 let await task =
-  let* () = Server.on_cancel (fun () -> Lev_fiber.Thread.cancel task) in
-  let+ res = Lev_fiber.Thread.await task in
-  match res with
-  | Error `Cancelled ->
-    let e =
-      Jsonrpc.Response.Error.make ~code:RequestCancelled ~message:"cancelled" ()
+  let* cancel_token = Server.cancel_token () in
+  let f () = Lev_fiber.Thread.await task in
+  let without_cancellation res =
+    match res with
+    | Ok s -> Ok s
+    | Error (`Exn exn) -> Error exn
+    | Error `Cancelled ->
+      let exn = Code_error.E (Code_error.create "unexpected cancellation" []) in
+      let backtrace = Printexc.get_callstack 10 in
+      Error { Exn_with_backtrace.exn; backtrace }
+  in
+  match cancel_token with
+  | None -> f () |> Fiber.map ~f:without_cancellation
+  | Some t -> (
+    let+ res, outcome =
+      Fiber.Cancel.with_handler t f ~on_cancel:(fun () ->
+          Lev_fiber.Thread.cancel task)
     in
-    raise (Jsonrpc.Response.Error.E e)
-  | Error (`Exn e) -> Error e
-  | Ok s -> Ok s
+    match outcome with
+    | Not_cancelled -> without_cancellation res
+    | Cancelled () ->
+      let e =
+        Jsonrpc.Response.Error.make
+          ~code:RequestCancelled
+          ~message:"cancelled"
+          ()
+      in
+      raise (Jsonrpc.Response.Error.E e))
 
 let with_pipeline (t : t) f =
   match t with
   | Other _ -> Code_error.raise "Document.dune" []
-  | Merlin t ->
+  | Merlin t -> (
     let* pipeline = Lazy_fiber.force t.pipeline in
     let* task =
-      Lev_fiber.Thread.task t.merlin ~f:(fun () ->
-          Mpipeline.with_pipeline pipeline (fun () -> f pipeline))
+      match
+        Lev_fiber.Thread.task t.merlin ~f:(fun () ->
+            let start = Unix.time () in
+            let res = Mpipeline.with_pipeline pipeline (fun () -> f pipeline) in
+            let stop = Unix.time () in
+            let event =
+              let module Event = Chrome_trace.Event in
+              let dur = Event.Timestamp.of_float_seconds (stop -. start) in
+              let fields =
+                Event.common_fields
+                  ~ts:(Event.Timestamp.of_float_seconds start)
+                  ~name:"merlin"
+                  ()
+              in
+              Event.complete ~dur fields
+            in
+            (event, res))
+      with
+      | Error `Stopped -> Fiber.never
+      | Ok task -> Fiber.return task
     in
-    await task
+    let* res = await task in
+    match res with
+    | Ok (event, result) ->
+      let+ () = Metrics.report event in
+      Ok result
+    | Error e -> Fiber.return (Error e))
 
 let with_pipeline_exn doc f =
   let+ res = with_pipeline doc f in
@@ -155,37 +198,28 @@ let with_pipeline_exn doc f =
 
 let version t = Text_document.version (tdoc t)
 
-let make_config db uri =
-  let path = Uri.to_path uri in
-  let mconfig = Mconfig.initial in
-  let path = Merlin_utils.Misc.canonicalize_filename path in
-  let filename = Filename.basename path in
-  let directory = Filename.dirname path in
-  let mconfig =
-    { mconfig with
-      ocaml = { mconfig.ocaml with real_paths = false }
-    ; query = { mconfig.query with filename; directory }
-    }
-  in
-  Merlin_config.get_external_config db mconfig path
-
 let make_pipeline merlin_config thread tdoc =
   Lazy_fiber.create (fun () ->
-      let* config =
-        let uri = Text_document.documentUri tdoc in
-        make_config merlin_config uri
-      in
+      let* config = Merlin_config.config merlin_config in
       let* async_make_pipeline =
-        Lev_fiber.Thread.task thread ~f:(fun () ->
-            Text_document.text tdoc |> Msource.make |> Mpipeline.make config)
+        match
+          Lev_fiber.Thread.task thread ~f:(fun () ->
+              Text_document.text tdoc |> Msource.make |> Mpipeline.make config)
+        with
+        | Error `Stopped -> Fiber.never
+        | Ok task -> Fiber.return task
       in
       let+ res = await async_make_pipeline in
       match res with
       | Ok s -> s
       | Error e -> Exn_with_backtrace.reraise e)
 
-let make_merlin wheel merlin_config ~merlin_thread tdoc syntax =
+let make_merlin wheel merlin_db ~merlin_thread tdoc syntax =
   let+ timer = Lev_fiber.Timer.Wheel.task wheel in
+  let merlin_config =
+    let uri = Text_document.documentUri tdoc in
+    Merlin_config.DB.get merlin_db uri
+  in
   let pipeline = make_pipeline merlin_config merlin_thread tdoc in
   Merlin
     { merlin_config; tdoc; pipeline; merlin = merlin_thread; timer; syntax }
@@ -205,9 +239,11 @@ let update_text ?version t changes =
   with
   | exception Text_document.Invalid_utf8 ->
     Log.log ~section:"warning" (fun () ->
-        Log.msg "dropping update due to invalid utf8"
+        Log.msg
+          "dropping update due to invalid utf8"
           [ ( "changes"
-            , Json.yojson_of_list TextDocumentContentChangeEvent.yojson_of_t
+            , Json.yojson_of_list
+                TextDocumentContentChangeEvent.yojson_of_t
                 changes )
           ]);
     t
@@ -255,7 +291,10 @@ let doc_comment doc pos =
 let close t =
   match t with
   | Other _ -> Fiber.return ()
-  | Merlin t -> Lev_fiber.Timer.Wheel.cancel t.timer
+  | Merlin t ->
+    Fiber.fork_and_join_unit
+      (fun () -> Merlin_config.destroy t.merlin_config)
+      (fun () -> Lev_fiber.Timer.Wheel.cancel t.timer)
 
 let get_impl_intf_counterparts uri =
   let fpath = Uri.to_path uri in

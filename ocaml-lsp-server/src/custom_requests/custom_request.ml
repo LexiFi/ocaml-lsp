@@ -1,15 +1,18 @@
 open Import
 
 type 't req_params_spec =
-  { params_schema : Jsonrpc.Message.Structured.t
-  ; of_jsonrpc_params : Jsonrpc.Message.Structured.t -> 't option
+  { params_schema : Jsonrpc.Structured.t
+  ; of_jsonrpc_params : Jsonrpc.Structured.t -> 't option
   }
 
 let of_jsonrpc_params_exn spec params =
   let raise_invalid_params ?data ~message () =
     Jsonrpc.Response.Error.raise
-    @@ Jsonrpc.Response.Error.make ?data
-         ~code:Jsonrpc.Response.Error.Code.InvalidParams ~message ()
+    @@ Jsonrpc.Response.Error.make
+         ?data
+         ~code:Jsonrpc.Response.Error.Code.InvalidParams
+         ~message
+         ()
   in
   match params with
   | None -> raise_invalid_params ~message:"Expected params but received none" ()
@@ -23,5 +26,7 @@ let of_jsonrpc_params_exn spec params =
           ; ("params_received", (params :> Json.t))
           ]
       in
-      raise_invalid_params ~message:"Unexpected parameter format"
-        ~data:error_json ())
+      raise_invalid_params
+        ~message:"Unexpected parameter format"
+        ~data:error_json
+        ())

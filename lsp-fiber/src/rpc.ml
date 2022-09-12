@@ -12,44 +12,9 @@ module Reply = struct
   let now r = Now r
 
   let later f = Later f
-
-  let to_jsonrpc t id to_json : Jsonrpc_fiber.Reply.t =
-    let f x = Jsonrpc.Response.ok id (to_json x) in
-    match t with
-    | Now r -> Jsonrpc_fiber.Reply.now (f r)
-    | Later k -> Jsonrpc_fiber.Reply.later (fun send -> k (fun r -> send (f r)))
 end
 
-module Cancel = struct
-  type state =
-    | Pending of { mutable callbacks : (unit -> unit Fiber.t) list }
-    | Finished
-
-  type t = state ref
-
-  let var = Fiber.Var.create ()
-
-  let register f =
-    let+ cancel = Fiber.Var.get var in
-    match cancel with
-    | None -> ()
-    | Some cancel -> (
-      match !cancel with
-      | Finished -> ()
-      | Pending p -> p.callbacks <- f :: p.callbacks)
-
-  let create () = ref (Pending { callbacks = [] })
-
-  let destroy t = t := Finished
-
-  let cancel t =
-    Fiber.of_thunk (fun () ->
-        match !t with
-        | Finished -> Fiber.return ()
-        | Pending { callbacks } ->
-          t := Finished;
-          Fiber.parallel_iter callbacks ~f:(fun f -> f ()))
-end
+let cancel_token = Fiber.Var.create ()
 
 module State = struct
   type t =
@@ -97,7 +62,7 @@ module type S = sig
 
   val notification : _ t -> out_notification -> unit Fiber.t
 
-  val on_cancel : (unit -> unit Fiber.t) -> unit Fiber.t
+  val cancel_token : unit -> Fiber.Cancel.t option Fiber.t
 
   module Batch : sig
     type t
@@ -124,11 +89,11 @@ module type Request_intf = sig
 
   type packed = E : 'r t -> packed
 
-  val of_jsonrpc : Jsonrpc.Message.request -> (packed, string) result
+  val of_jsonrpc : Jsonrpc.Request.t -> (packed, string) result
 
   val yojson_of_result : 'a t -> 'a -> Json.t
 
-  val to_jsonrpc_request : 'a t -> id:Id.t -> Jsonrpc.Message.request
+  val to_jsonrpc_request : 'a t -> id:Id.t -> Jsonrpc.Request.t
 
   val response_of_json : 'a t -> Json.t -> 'a
 end
@@ -136,9 +101,9 @@ end
 module type Notification_intf = sig
   type t
 
-  val of_jsonrpc : Jsonrpc.Message.notification -> (t, string) result
+  val of_jsonrpc : Jsonrpc.Notification.t -> (t, string) result
 
-  val to_jsonrpc : t -> Jsonrpc.Message.notification
+  val to_jsonrpc : t -> Jsonrpc.Notification.t
 end
 
 module Table = Stdlib.Hashtbl.Make (Jsonrpc.Id)
@@ -168,7 +133,7 @@ struct
     ; (* Filled when the server is initialied *)
       initialized : Initialize.t Fiber.Ivar.t
     ; mutable req_id : int
-    ; pending : Cancel.t Table.t
+    ; pending : Fiber.Cancel.t Table.t
     ; detached : Fiber.Pool.t
     }
 
@@ -193,23 +158,34 @@ struct
       ; h_on_notification : 'state t -> In_notification.t -> 'state Fiber.t
       }
 
-    let on_notification_default _ _ =
+    let on_notification_default _ notification =
       Format.eprintf "dropped notification@.%!";
-      assert false
+      let notification = In_notification.to_jsonrpc notification in
+      Code_error.raise
+        "unexpected notification"
+        [ ( "notification"
+          , Json.to_dyn (Jsonrpc.Notification.yojson_of_t notification) )
+        ]
 
-    let make ?on_request ?(on_notification = on_notification_default) () =
-      let h_on_request =
-        match on_request with
-        | Some t -> t
-        | None -> assert false
-      in
-      { h_on_request; h_on_notification = on_notification }
+    let on_request_default =
+      { on_request =
+          (fun _ _ ->
+            Jsonrpc.Response.Error.make
+              ~code:InternalError
+              ~message:"Not supported"
+              ()
+            |> Jsonrpc.Response.Error.raise)
+      }
+
+    let make ?(on_request = on_request_default)
+        ?(on_notification = on_notification_default) () =
+      { h_on_request = on_request; h_on_notification = on_notification }
   end
 
   let state t = Session.state (Fdecl.get t.session)
 
   let to_jsonrpc (type state) (t : state t) h_on_request h_on_notification =
-    let on_request (ctx : (state, Id.t) Session.Context.t) =
+    let on_request (ctx : (state, Jsonrpc.Request.t) Session.Context.t) =
       let req = Session.Context.message ctx in
       let state = Session.Context.state ctx in
       match In_request.of_jsonrpc req with
@@ -219,20 +195,38 @@ struct
         Fiber.return
           (Jsonrpc_fiber.Reply.now (Jsonrpc.Response.error req.id error), state)
       | Ok (In_request.E r) ->
-        let cancel = Cancel.create () in
-        Table.replace t.pending req.id cancel;
+        let cancel = Fiber.Cancel.create () in
+        let remove = lazy (Table.remove t.pending req.id) in
         let+ response, state =
-          Fiber.finalize
+          Fiber.with_error_handler
+            ~on_error:
+              (Stdune.Exn_with_backtrace.map_and_reraise ~f:(fun exn ->
+                   Lazy.force remove;
+                   exn))
             (fun () ->
-              Fiber.Var.set Cancel.var cancel (fun () ->
+              Fiber.Var.set cancel_token cancel (fun () ->
+                  Table.replace t.pending req.id cancel;
                   h_on_request.on_request t r))
-            ~finally:(fun () ->
-              Cancel.destroy cancel;
-              Table.remove t.pending req.id;
-              Fiber.return ())
+        in
+        let to_response x =
+          Jsonrpc.Response.ok req.id (In_request.yojson_of_result r x)
         in
         let reply =
-          Reply.to_jsonrpc response req.id (In_request.yojson_of_result r)
+          match response with
+          | Reply.Now r ->
+            Lazy.force remove;
+            Jsonrpc_fiber.Reply.now (to_response r)
+          | Reply.Later k ->
+            let f send =
+              Fiber.finalize
+                (fun () ->
+                  Fiber.Var.set cancel_token cancel (fun () ->
+                      k (fun r -> send (to_response r))))
+                ~finally:(fun () ->
+                  Lazy.force remove;
+                  Fiber.return ())
+            in
+            Jsonrpc_fiber.Reply.later f
         in
         (reply, state)
     in
@@ -285,6 +279,29 @@ struct
           Session.request (Fdecl.get t.session) req
         in
         receive_response req resp)
+
+  let request_with_cancel (type r) (t : _ t) cancel ~on_cancel
+      (req : r Out_request.t) : [ `Ok of r | `Cancelled ] Fiber.t =
+    let* () = Fiber.return () in
+    let jsonrpc_req = create_request t req in
+    let+ resp, cancel_status =
+      Fiber.Cancel.with_handler
+        cancel
+        ~on_cancel:(fun () -> on_cancel jsonrpc_req.id)
+        (fun () ->
+          let+ resp = Session.request (Fdecl.get t.session) jsonrpc_req in
+          match resp.result with
+          | Error { code = RequestCancelled; _ } -> `Cancelled
+          | Ok _ when Fiber.Cancel.fired cancel -> `Cancelled
+          | Ok s -> `Ok (Out_request.response_of_json req s)
+          | Error e -> raise (Jsonrpc.Response.Error.E e))
+    in
+    match cancel_status with
+    | Cancelled () -> `Cancelled
+    | Not_cancelled -> (
+      match resp with
+      | `Ok resp -> `Ok resp
+      | `Cancelled -> assert false)
 
   let notification (t : _ t) (n : Out_notification.t) : unit Fiber.t =
     let jsonrpc_request = Out_notification.to_jsonrpc n in
@@ -341,11 +358,12 @@ struct
     let+ () =
       match Table.find_opt t.pending id with
       | None -> Fiber.return ()
-      | Some id -> Fiber.Pool.task t.detached ~f:(fun () -> Cancel.cancel id)
+      | Some token ->
+        Fiber.Pool.task t.detached ~f:(fun () -> Fiber.Cancel.fire token)
     in
     (Jsonrpc_fiber.Notify.Continue, state t)
 
-  let on_cancel = Cancel.register
+  let cancel_token () = Fiber.Var.get cancel_token
 end
 
 module Client = struct
@@ -366,10 +384,14 @@ module Client = struct
     let h_on_notification = h_on_notification handler in
     make ~name:"client" handler.h_on_request h_on_notification io
 
+  let request_with_cancel t cancel r =
+    request_with_cancel t cancel r ~on_cancel:(fun id ->
+        notification t (Client_notification.CancelRequest id))
+
   let start (t : _ t) (p : InitializeParams.t) =
     Fiber.of_thunk (fun () ->
         assert (t.state = Waiting_for_init);
-        let loop = start_loop t in
+        let loop () = start_loop t in
         let init () =
           let* resp = request t (Client_request.Initialize p) in
           Log.log ~section:"client" (fun () ->
@@ -378,7 +400,7 @@ module Client = struct
           t.state <- Running;
           Fiber.Ivar.fill t.initialized resp
         in
-        Fiber.fork_and_join_unit (fun () -> loop) init)
+        Fiber.fork_and_join_unit loop init)
 end
 
 module Server = struct

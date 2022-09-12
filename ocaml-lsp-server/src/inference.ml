@@ -5,7 +5,8 @@ let infer_intf_for_impl doc =
   match Document.kind doc with
   | Intf ->
     Code_error.raise
-      "expected an implementation document, got an interface instead" []
+      "expected an implementation document, got an interface instead"
+      []
   | Impl ->
     Document.with_pipeline_exn doc (fun pipeline ->
         let typer = Mpipeline.typer_result pipeline in
@@ -31,7 +32,7 @@ let language_id_of_fname s =
   | ext ->
     Code_error.raise "unsupported file extension" [ ("extension", String ext) ]
 
-let force_open_document (state : State.t) uri =
+let open_document_from_file (state : State.t) uri =
   let filename = Uri.to_path uri in
   Fiber.of_thunk (fun () ->
       match Io.String_path.read_file filename with
@@ -47,11 +48,13 @@ let force_open_document (state : State.t) uri =
         let params =
           DidOpenTextDocumentParams.create ~textDocument:text_document
         in
-        let* doc =
-          Document.make (State.wheel state) state.merlin_config
-            ~merlin_thread:state.merlin params
+        let+ doc =
+          Document.make
+            (State.wheel state)
+            state.merlin_config
+            ~merlin_thread:state.merlin
+            params
         in
-        let+ () = Document_store.open_document state.store doc in
         Some doc)
 
 let infer_intf (state : State.t) doc =
@@ -66,7 +69,7 @@ let infer_intf (state : State.t) doc =
         let* impl =
           match Document_store.get_opt state.store impl_uri with
           | Some impl -> Fiber.return (Some impl)
-          | None -> force_open_document state impl_uri
+          | None -> open_document_from_file state impl_uri
         in
         match impl with
         | None -> Fiber.return None

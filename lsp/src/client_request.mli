@@ -11,6 +11,7 @@ type _ t =
       TextDocumentPositionParams.t
       -> Locations.t option t
   | TextDocumentTypeDefinition : TypeDefinitionParams.t -> Locations.t option t
+  | TextDocumentImplementation : ImplementationParams.t -> Locations.t option t
   | TextDocumentCompletion :
       CompletionParams.t
       -> [ `CompletionList of CompletionList.t
@@ -20,7 +21,13 @@ type _ t =
          t
   | TextDocumentCodeLens : CodeLensParams.t -> CodeLens.t list t
   | TextDocumentCodeLensResolve : CodeLens.t -> CodeLens.t t
+  | TextDocumentPrepareCallHierarchy :
+      CallHierarchyPrepareParams.t
+      -> CallHierarchyItem.t list option t
   | TextDocumentPrepareRename : PrepareRenameParams.t -> Range.t option t
+  | TextDocumentRangeFormatting :
+      DocumentRangeFormattingParams.t
+      -> TextEdit.t list option t
   | TextDocumentRename : RenameParams.t -> WorkspaceEdit.t t
   | TextDocumentLink : DocumentLinkParams.t -> DocumentLink.t list option t
   | TextDocumentLinkResolve : DocumentLink.t -> DocumentLink.t t
@@ -79,9 +86,18 @@ type _ t =
   | LinkedEditingRange :
       LinkedEditingRangeParams.t
       -> LinkedEditingRanges.t option t
+  | CallHierarchyIncomingCalls :
+      CallHierarchyIncomingCallsParams.t
+      -> CallHierarchyIncomingCall.t list option t
+  | CallHierarchyOutgoingCalls :
+      CallHierarchyOutgoingCallsParams.t
+      -> CallHierarchyOutgoingCall.t list option t
+  | WillCreateFiles : CreateFilesParams.t -> WorkspaceEdit.t option t
+  | WillDeleteFiles : DeleteFilesParams.t -> WorkspaceEdit.t option t
+  | WillRenameFiles : RenameFilesParams.t -> WorkspaceEdit.t option t
   | UnknownRequest :
       { meth : string
-      ; params : Jsonrpc.Message.Structured.t option
+      ; params : Jsonrpc.Structured.t option
       }
       -> Json.t t
 
@@ -89,15 +105,15 @@ val yojson_of_result : 'a t -> 'a -> Json.t
 
 type packed = E : 'r t -> packed
 
-val of_jsonrpc : Jsonrpc.Message.request -> (packed, string) Result.t
+val of_jsonrpc : Jsonrpc.Request.t -> (packed, string) Result.t
 
-val to_jsonrpc_request : _ t -> id:Jsonrpc.Id.t -> Jsonrpc.Message.request
+val to_jsonrpc_request : _ t -> id:Jsonrpc.Id.t -> Jsonrpc.Request.t
 
 val response_of_json : 'a t -> Json.t -> 'a
 
 val text_document :
      _ t
   -> (   meth:string
-      -> params:Jsonrpc.Message.Structured.t option
+      -> params:Jsonrpc.Structured.t option
       -> TextDocumentIdentifier.t option)
   -> TextDocumentIdentifier.t option

@@ -13,7 +13,8 @@ module Progress = struct
     | End e -> WorkDoneProgressEnd.yojson_of_t e
 
   let t_of_yojson json =
-    Json.Of.untagged_union "Progress"
+    Json.Of.untagged_union
+      "Progress"
       [ (fun j -> Begin (WorkDoneProgressBegin.t_of_yojson j))
       ; (fun j -> Report (WorkDoneProgressReport.t_of_yojson j))
       ; (fun j -> End (WorkDoneProgressEnd.t_of_yojson j))
@@ -28,7 +29,7 @@ type t =
   | TelemetryNotification of Json.t
   | CancelRequest of Jsonrpc.Id.t
   | WorkDoneProgress of Progress.t ProgressParams.t
-  | UnknownNotification of Jsonrpc.Message.notification
+  | UnknownNotification of Jsonrpc.Notification.t
 
 let method_ = function
   | ShowMessage _ -> "window/showMessage"
@@ -55,31 +56,36 @@ let to_jsonrpc t =
   let params =
     match yojson_of_t t with
     | None -> None
-    | Some s -> Some (Jsonrpc.Message.Structured.of_json s)
+    | Some s -> Some (Jsonrpc.Structured.t_of_yojson s)
   in
-  { Jsonrpc.Message.id = (); params; method_ }
+  { Jsonrpc.Notification.params; method_ }
 
-let of_jsonrpc (r : Jsonrpc.Message.notification) =
+let of_jsonrpc (r : Jsonrpc.Notification.t) =
   let open Result.O in
+  let params = r.params in
   match r.method_ with
   | "window/showMessage" ->
-    let+ params = Json.message_params r ShowMessageParams.t_of_yojson in
+    let+ params = Json.message_params params ShowMessageParams.t_of_yojson in
     ShowMessage params
   | "textDocument/publishDiagnostics" ->
-    let+ params = Json.message_params r PublishDiagnosticsParams.t_of_yojson in
+    let+ params =
+      Json.message_params params PublishDiagnosticsParams.t_of_yojson
+    in
     PublishDiagnostics params
   | "window/logMessage" ->
-    let+ params = Json.message_params r LogMessageParams.t_of_yojson in
+    let+ params = Json.message_params params LogMessageParams.t_of_yojson in
     LogMessage params
   | "telemetry/event" ->
-    let+ params = Json.message_params r (fun x -> x) in
+    let+ params = Json.message_params params (fun x -> x) in
     TelemetryNotification params
   | "$/progress" ->
     let+ params =
-      Json.message_params r (ProgressParams.t_of_yojson Progress.t_of_yojson)
+      Json.message_params
+        params
+        (ProgressParams.t_of_yojson Progress.t_of_yojson)
     in
     WorkDoneProgress params
   | m when m = Cancel_request.meth_ ->
-    let+ params = Json.message_params r Cancel_request.t_of_yojson in
+    let+ params = Json.message_params params Cancel_request.t_of_yojson in
     CancelRequest params
   | _ -> Ok (UnknownNotification r)
